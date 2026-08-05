@@ -1,0 +1,21 @@
+/* Section: Departure & destination — ordered stop list, drag-reorder, and stop-limit styles. */
+/* Multi-stop destination entry */
+.stop-list{display:flex; flex-direction:column; gap:8px; margin-bottom:10px;}
+.stop-row{display:flex; align-items:center; gap:10px; border:1.5px solid var(--gray-300); border-radius:10px; padding:9px 12px; background:#fff;}
+.stop-row .drag{color:var(--gray-300); font-weight:900; cursor:grab; font-size:14px; user-select:none; -webkit-user-select:none; touch-action:none; padding:0 2px;}
+.stop-row.dragging{opacity:.65; border-color:var(--coral); box-shadow:var(--shadow);}
+.stop-row.dragging .drag{cursor:grabbing;}
+.stop-row.drop-before{box-shadow:0 -10px 0 -7px var(--coral);}
+.stop-row.drop-after{box-shadow:0 10px 0 -7px var(--coral);}
+.stop-row .stop-num{width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.stop-row .stop-name{flex:1; font-weight:700; font-size:13.5px;}
+.stop-row .nights-input{width:76px; border:1.5px solid var(--gray-300); border-radius:8px; padding:6px 8px; font-size:12.5px; font-family:inherit; text-align:center;}
+.stop-row .move-btn{
+  border:1.5px solid var(--gray-300); background:#fff; color:var(--gray-600); border-radius:6px;
+  width:24px; height:24px; font-size:12px; font-weight:800; cursor:pointer; padding:0; line-height:1;
+  display:flex; align-items:center; justify-content:center; font-family:inherit;
+}
+.stop-row .move-btn:disabled{opacity:.35; cursor:default;}
+.stop-row .remove-x{color:var(--gray-600); cursor:pointer; font-weight:800; font-size:14px; padding:0 4px; background:none; border:none; font-family:inherit;}
+.stop-arrow{text-align:center; color:var(--gray-300); font-size:13px; margin:-2px 0;}
+.limit-msg{color:var(--warn); font-weight:700;}

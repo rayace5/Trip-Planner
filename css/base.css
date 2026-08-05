@@ -1,0 +1,79 @@
+/* Base: shared variables, reset, typography, and layout primitives used by multiple sections. */
+:root{
+  --coral:#FF385C; --coral-dark:#E31C5F; --coral-soft:#FFE8EC;
+  --ink:#222222; --gray-900:#222; --gray-600:#717171; --gray-300:#DDDDDD; --gray-100:#F7F7F7;
+  --good:#00A86B; --warn:#C13515; --shadow:0 6px 16px rgba(0,0,0,.12);
+  --radius:14px;
+}
+*{box-sizing:border-box;}
+body{
+  font-family:"Nunito Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  color:var(--ink); margin:0; background:#fff; -webkit-font-smoothing:antialiased;
+}
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 48px; border-bottom:1px solid var(--gray-300); position:sticky; top:0; background:#fff; z-index:20;
+}
+.brand{display:flex; align-items:center; gap:8px; font-weight:900; font-size:20px; color:var(--coral);}
+.brand-mark{width:30px; height:30px; border-radius:8px; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px;}
+
+.stage{display:none; max-width:1160px; margin:0 auto; padding:40px 48px 100px;}
+.stage.active{display:block;}
+
+h1.page-title{font-size:32px; font-weight:900; margin:0 0 6px;}
+p.page-sub{color:var(--gray-600); font-size:15px; margin:0 0 36px;}
+
+.section-card{background:#fff; border:1px solid var(--gray-300); border-radius:var(--radius); padding:28px; margin-bottom:24px;}
+.section-title{font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--coral); margin-bottom:18px;}
+
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:4px;}
+.field-row.triple{grid-template-columns:1fr 1fr 1fr;}
+.field{margin-bottom:18px;}
+.field label{display:block; font-size:13px; font-weight:700; margin-bottom:8px;}
+.input{
+  width:100%; border:1.5px solid var(--gray-300); border-radius:10px; padding:13px 14px;
+  font-size:14px; font-family:inherit; color:var(--ink); background:#fff;
+}
+.input::placeholder{color:#b0b0b0;}
+.input:disabled{background:var(--gray-100); color:var(--gray-600); cursor:not-allowed;}
+textarea.input{resize:vertical; min-height:70px;}
+.pill-group{display:flex; gap:8px; flex-wrap:wrap;}
+.pill{
+  border:1.5px solid var(--gray-300); border-radius:999px; padding:9px 16px; font-size:13px;
+  font-weight:700; color:var(--gray-600); cursor:pointer; background:#fff; user-select:none;
+}
+.pill.selected{border-color:var(--ink); color:var(--ink); background:var(--gray-100);}
+.chip{
+  border:1.5px solid var(--gray-300); border-radius:999px; padding:7px 14px; font-size:12px;
+  font-weight:700; color:var(--gray-600); cursor:pointer; user-select:none; background:#fff;
+}
+.chip.selected{background:var(--coral-soft); border-color:var(--coral); color:var(--coral-dark);}
+.chip .chip-x{margin-left:6px; font-weight:800;}
+.helper{font-size:12px; color:var(--gray-600); margin-top:8px;}
+
+.section-heading{display:flex; align-items:baseline; gap:10px; margin:0 0 6px;}
+.section-heading h2{font-size:20px; font-weight:900; margin:0;}
+.card-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+.option-card{
+  border:1.5px solid var(--gray-300); border-radius:var(--radius); padding:18px; position:relative;
+  cursor:pointer; transition:box-shadow .15s; background:#fff;
+}
+.option-card:hover{box-shadow:var(--shadow);}
+.option-card.selected{border-color:var(--ink); box-shadow:var(--shadow);}
+.rec-badge{
+  position:absolute; top:-11px; left:16px; background:var(--ink); color:#fff; font-size:10px;
+  font-weight:800; padding:4px 10px; border-radius:999px; letter-spacing:.03em;
+}
+.select-dot{position:absolute; top:16px; right:16px; width:20px; height:20px; border-radius:50%; border:2px solid var(--gray-300);}
+.option-card.selected .select-dot{border-color:var(--coral); background:var(--coral);}
+.option-card .name{font-weight:800; font-size:14px; margin-bottom:2px; padding-right:24px;}
+.option-card .detail{font-size:12px; color:var(--gray-600); margin-bottom:3px;}
+.option-card .rationale{font-size:12.5px; color:var(--ink); margin-top:8px; line-height:1.45;}
+.option-card .tradeoff{font-size:11.5px; color:var(--gray-600); margin-top:10px; padding-top:10px; border-top:1px dashed var(--gray-300);}
+.option-card .tradeoff.rec{color:var(--coral-dark); font-weight:700;}
+
+@media (max-width:760px){
+  .topbar{padding:14px 20px;}
+  .stage{padding:28px 20px 80px;}
+  .field-row, .field-row.triple, .checkbox-grid, .card-grid{grid-template-columns:1fr;}
+}

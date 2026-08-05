@@ -129,6 +129,7 @@
   .confirmation-card h2{font-size:22px; font-weight:900; margin:0 0 8px;}
   .confirmation-card p{font-size:14px; color:var(--gray-600); margin:0 0 6px;}
   .confirmation-card .summary-line{font-size:13.5px; color:var(--ink); font-weight:700; margin-top:14px;}
+  .date-rationale{font-size:12.5px; color:var(--gray-600); font-weight:600; margin-top:8px;}
   .edit-again-btn{
     margin-top:20px; background:#fff; color:var(--ink); border:1.5px solid var(--ink); border-radius:12px;
     padding:12px 24px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit;
@@ -159,6 +160,7 @@
     <h2>Your trip details are in!</h2>
     <p>We've saved your preferences. Next up: we'll research flights, lodging, and a day-by-day plan and build your full trip.</p>
     <div class="summary-line" id="confirmationSummary"></div>
+    <div class="date-rationale" id="dateRationale"></div>
     <button type="button" class="edit-again-btn" id="editAgainBtn">← Edit my answers</button>
   </div>
 
@@ -525,6 +527,233 @@
     banner.innerHTML = '';
   }
 
+  // ---------- General-window date resolution ----------
+  // Deterministic v1 heuristic: score the user's candidate months for their
+  // destination (small honest dataset: a handful of well-known regions plus a
+  // generic northern-hemisphere fallback), then pick a concrete date range in
+  // the best month. The one-line reason reflects the rule that actually fired.
+  var MONTH_ABBRS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var EVENTS_REQUIREMENT = 'Travel during key special events/holidays for that destination';
+  var LEAD_DAYS = 7; // don't recommend a start date less than a week away
+
+  // Generic (northern-hemisphere default) month desirability + season notes.
+  var GENERIC_MONTH_SCORE = { Jan:0, Feb:0, Mar:1, Apr:2, May:2, Jun:1, Jul:0, Aug:0, Sep:2, Oct:2, Nov:1, Dec:0 };
+  var GENERIC_NOTES = {
+    Jan:'quiet low season', Feb:'quiet low season', Mar:'early shoulder season',
+    Apr:'shoulder season, mild weather', May:'shoulder season, mild weather',
+    Jun:'early summer, before peak crowds', Jul:'peak summer crowds and prices',
+    Aug:'peak summer crowds and prices', Sep:'shoulder season, mild weather',
+    Oct:'shoulder season, mild weather', Nov:'late shoulder season', Dec:'holiday high season'
+  };
+
+  // Major US travel-holiday weeks (apply to every trip — they drive flight
+  // prices/crowds from a US origin). from/to are days of the month.
+  var US_HOLIDAYS = {
+    Jan:{ name:"New Year's week", from:1, to:2, majorDay:1 },
+    May:{ name:'Memorial Day weekend', from:24, to:31 },
+    Jul:{ name:'July 4th week', from:1, to:5, majorDay:4 },
+    Sep:{ name:'Labor Day week', from:1, to:7 },
+    Nov:{ name:'Thanksgiving week', from:22, to:28, majorDay:26 },
+    Dec:{ name:'Christmas–New Year peak', from:23, to:31, majorDay:25 }
+  };
+
+  // A handful of notable regions, keyword-matched against the destination text.
+  var REGION_PROFILES = [
+    {
+      name:'Japan',
+      keywords:['japan','tokyo','kyoto','osaka','hokkaido','okinawa','hiroshima','nagoya'],
+      monthScore:{ Jan:1, Feb:1, Mar:3, Apr:3, May:2, Jun:0, Jul:0, Aug:0, Sep:1, Oct:3, Nov:3, Dec:1 },
+      notes:{ Mar:'early cherry-blossom season, mild spring weather', Apr:'peak cherry-blossom season, mild spring weather',
+        May:'pleasant late spring', Jun:'rainy season', Jul:'hot and humid', Aug:'hot and humid',
+        Sep:'tail end of typhoon season', Oct:'crisp autumn weather', Nov:'autumn foliage, cool and clear', Dec:'cold but clear' },
+      events:{ Mar:{ name:'cherry blossom season', day:24 }, Apr:{ name:'cherry blossom season', day:3 },
+        Jul:{ name:'Gion Matsuri in Kyoto', day:14 }, Nov:{ name:'autumn foliage season', day:15 } },
+      holidays:{ Apr:{ name:'Golden Week', from:29, to:30 }, May:{ name:'Golden Week', from:1, to:6 },
+        Aug:{ name:'Obon week', from:13, to:16 }, Dec:{ name:'New Year holidays', from:28, to:31 } }
+    },
+    {
+      name:'Europe',
+      keywords:['europe','london','england','united kingdom','scotland','ireland','paris','france','italy','rome','florence','venice',
+        'spain','barcelona','madrid','portugal','lisbon','greece','athens','amsterdam','netherlands','germany','berlin','munich',
+        'prague','vienna','austria','switzerland','croatia'],
+      monthScore:{ Jan:0, Feb:0, Mar:1, Apr:2, May:3, Jun:2, Jul:0, Aug:0, Sep:3, Oct:2, Nov:1, Dec:1 },
+      notes:{ Apr:'spring shoulder season', May:'late-spring shoulder season, mild weather', Jun:'warm early summer, crowds building',
+        Jul:'peak-season crowds and prices', Aug:'peak-season crowds and prices', Sep:'shoulder season, mild weather',
+        Oct:'autumn shoulder season, mild weather', Dec:'Christmas-market season' },
+      events:{ Feb:{ name:'Carnival season', day:10 }, Sep:{ name:'Oktoberfest (Munich)', day:20 }, Dec:{ name:'Christmas markets', day:5 } },
+      holidays:{ Aug:{ name:'European August holidays', from:1, to:31 }, Dec:{ name:'Christmas–New Year peak', from:23, to:31, majorDay:25 } }
+    },
+    {
+      name:'Southeast Asia',
+      keywords:['southeast asia','thailand','bangkok','phuket','chiang mai','vietnam','hanoi','bali','indonesia','cambodia','laos',
+        'malaysia','singapore','philippines'],
+      monthScore:{ Jan:3, Feb:3, Mar:2, Apr:1, May:1, Jun:0, Jul:1, Aug:1, Sep:0, Oct:1, Nov:2, Dec:2 },
+      notes:{ Jan:'dry season, best weather of the year', Feb:'dry season, best weather of the year', Mar:'dry but heating up',
+        Apr:'hottest month of the year', Sep:'peak monsoon season', Oct:'monsoon tapering off', Nov:'monsoon ending, shoulder pricing',
+        Dec:'dry season begins' },
+      events:{ Apr:{ name:'Songkran water festival', day:13 }, Nov:{ name:'Loy Krathong lantern festival', day:15 } },
+      holidays:{ Dec:{ name:'holiday high season', from:20, to:31, majorDay:25 } }
+    },
+    {
+      name:'Mexico & Caribbean',
+      keywords:['mexico','cancun','tulum','oaxaca','caribbean','bahamas','jamaica','puerto rico','dominican','aruba','costa rica','belize'],
+      monthScore:{ Jan:2, Feb:3, Mar:2, Apr:2, May:1, Jun:0, Jul:0, Aug:0, Sep:0, Oct:0, Nov:2, Dec:2 },
+      notes:{ Jan:'dry season', Feb:'dry season, ideal beach weather', Mar:'dry season', Apr:'dry season winding down',
+        Aug:'hurricane season', Sep:'peak hurricane season', Oct:'hurricane season', Nov:'hurricane season ending, shoulder pricing',
+        Dec:'dry season, holiday crowds late in the month' },
+      events:{ Feb:{ name:'Carnival season', day:10 }, Nov:{ name:'Día de los Muertos', day:1 } },
+      holidays:{ Mar:{ name:'spring-break weeks', from:7, to:21 }, Dec:{ name:'Christmas–New Year peak', from:20, to:31, majorDay:25 } }
+    },
+    {
+      name:'Australia & New Zealand',
+      keywords:['australia','sydney','melbourne','new zealand','auckland','queenstown','tasmania'],
+      monthScore:{ Jan:1, Feb:2, Mar:3, Apr:2, May:1, Jun:0, Jul:0, Aug:0, Sep:1, Oct:2, Nov:3, Dec:1 },
+      notes:{ Jan:'southern-hemisphere summer school holidays, peak domestic travel', Feb:'late southern summer',
+        Mar:'southern-hemisphere autumn shoulder, mild weather', Apr:'autumn shoulder season', Jun:'southern winter',
+        Jul:'southern winter', Aug:'southern winter', Oct:'spring shoulder season',
+        Nov:'southern-hemisphere spring shoulder, mild weather', Dec:'southern summer peak season' },
+      events:{ Mar:{ name:'harvest and festival season', day:10 } },
+      holidays:{ Dec:{ name:'Christmas + summer school holidays', from:18, to:31, majorDay:25 }, Jan:{ name:'summer school holidays', from:1, to:26 } }
+    },
+    {
+      name:'US Southwest & Texas',
+      keywords:['texas','austin','dallas','houston','san antonio','arizona','phoenix','las vegas','new mexico'],
+      monthScore:{ Jan:1, Feb:2, Mar:3, Apr:3, May:2, Jun:0, Jul:0, Aug:0, Sep:1, Oct:3, Nov:2, Dec:1 },
+      notes:{ Mar:'spring shoulder, wildflower season', Apr:'spring shoulder, warm not scorching', May:'warming up fast',
+        Jun:'triple-digit heat', Jul:'triple-digit heat', Aug:'triple-digit heat', Sep:'still hot, crowds thinning',
+        Oct:'autumn shoulder, summer heat broken', Nov:'mild autumn weather' },
+      events:{ Mar:{ name:'SXSW (Austin)', day:13 }, Oct:{ name:'State Fair of Texas (Dallas)', day:1 } },
+      holidays:{}
+    }
+  ];
+
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function toISODate(d){ return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+
+  // "7–10 days" -> ~8 nights; "1 week" -> 7; "5 nights" -> 5; blank/unparseable -> 7.
+  function parseTripNights(text){
+    if (!text) return 7;
+    var nums = (String(text).match(/\d+(?:\.\d+)?/g) || []).map(Number).filter(function(n){ return n > 0; });
+    if (!nums.length) return 7;
+    var lo = Math.min.apply(null, nums), hi = Math.max.apply(null, nums);
+    var mid = Math.round((lo + hi) / 2);
+    var nights;
+    if (/week/i.test(text)) nights = mid * 7;
+    else if (/night/i.test(text)) nights = mid;
+    else nights = Math.max(1, mid - 1); // days -> nights
+    return Math.min(Math.max(Math.round(nights), 1), 30);
+  }
+
+  function matchRegionProfile(destText){
+    var t = String(destText).toLowerCase();
+    for (var i = 0; i < REGION_PROFILES.length; i++){
+      for (var k = 0; k < REGION_PROFILES[i].keywords.length; k++){
+        if (t.indexOf(REGION_PROFILES[i].keywords[k]) !== -1) return REGION_PROFILES[i];
+      }
+    }
+    return null;
+  }
+
+  function formatRange(s, e){
+    var core = (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear())
+      ? MONTH_ABBRS[s.getMonth()] + ' ' + s.getDate() + '–' + e.getDate()
+      : MONTH_ABBRS[s.getMonth()] + ' ' + s.getDate() + ' – ' + MONTH_ABBRS[e.getMonth()] + ' ' + e.getDate();
+    return core + ', ' + e.getFullYear();
+  }
+
+  function formatISODate(iso){
+    var p = String(iso).split('-');
+    return MONTH_ABBRS[parseInt(p[1], 10) - 1] + ' ' + parseInt(p[2], 10) + ', ' + p[0];
+  }
+
+  function resolveGeneralWindow(data, now){
+    now = now || new Date();
+    var selectedYear = data.dates.year;
+    var nights = parseTripNights(data.dates.tripLength);
+    var destText = data.destination.mode === 'known'
+      ? data.destination.stops.map(function(s){ return s.name; }).join(' ')
+      : data.destination.regions.join(' ');
+    var profile = matchRegionProfile(destText);
+    var eventSeeking = (data.otherRequirements || []).indexOf(EVENTS_REQUIREMENT) !== -1;
+
+    // Sort candidate months chronologically; drop anything unrecognized.
+    var months = data.dates.months
+      .filter(function(m){ return MONTH_ABBRS.indexOf(m) !== -1; })
+      .sort(function(a, b){ return MONTH_ABBRS.indexOf(a) - MONTH_ABBRS.indexOf(b); });
+    if (!months.length) return null;
+
+    var earliest = new Date(now.getFullYear(), now.getMonth(), now.getDate() + LEAD_DAYS);
+    function monthFeasible(y, mi){ return new Date(y, mi + 1, 0) >= earliest; }
+
+    // Roll forward within the selected window: drop fully-past months; if the
+    // whole window has passed for the selected year, use the same months next year.
+    var year = selectedYear, rolled = false;
+    var candidates = months.filter(function(m){ return monthFeasible(year, MONTH_ABBRS.indexOf(m)); });
+    if (!candidates.length){ year = selectedYear + 1; rolled = true; candidates = months.slice(); }
+
+    // Score each candidate month; ties go to the earlier month.
+    var best = null, bestScore = -Infinity;
+    candidates.forEach(function(m){
+      var ev = profile && profile.events ? profile.events[m] : null;
+      var hol = (profile && profile.holidays && profile.holidays[m]) || US_HOLIDAYS[m] || null;
+      var score = profile ? (profile.monthScore[m] || 0) : (GENERIC_MONTH_SCORE[m] || 0);
+      if (eventSeeking){ if (ev) score += 2; }        // favor known event months
+      else if (hol) score -= 1;                        // mildly avoid holiday-peak months
+      if (score > bestScore){ bestScore = score; best = { m: m, mi: MONTH_ABBRS.indexOf(m), ev: ev, hol: hol }; }
+    });
+
+    // Pick a start day inside the winning month: mid-month by default,
+    // event-aligned when seeking events, shifted off holiday weeks otherwise.
+    var daysInMonth = new Date(year, best.mi + 1, 0).getDate();
+    var start = 12;
+    if (eventSeeking && best.ev){
+      start = Math.min(best.ev.day, daysInMonth);
+    } else if (best.hol && start <= best.hol.to && start + nights >= best.hol.from){
+      var before = best.hol.from - nights - 1;
+      var after = best.hol.to + 2;
+      if (before >= 2) start = before;
+      else if (after <= daysInMonth - 1) start = after;
+    }
+    if (best.hol && best.hol.majorDay === start) start += 1; // never start on the holiday itself
+
+    var startDate = new Date(year, best.mi, start);
+    if (startDate < earliest) startDate = new Date(earliest.getFullYear(), earliest.getMonth(), earliest.getDate());
+    var endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + nights);
+
+    var overlapsHoliday = !!(best.hol && startDate.getMonth() === best.mi &&
+      startDate.getDate() <= best.hol.to && startDate.getDate() + nights >= best.hol.from);
+
+    // Reason string reflects the rules that actually fired.
+    var fragments = [];
+    if (rolled) fragments.push('rolled forward to ' + year + ' since your ' + selectedYear + ' window has passed');
+    if (eventSeeking && best.ev) fragments.push('timed for ' + best.ev.name);
+    var note = (profile && profile.notes && profile.notes[best.m]) || GENERIC_NOTES[best.m];
+    if (note) fragments.push(note);
+    if (eventSeeking && !best.ev){
+      fragments.push('best-fit month in your window (no marquee event dates on file)');
+    } else if (!eventSeeking){
+      if (best.hol && !overlapsHoliday) fragments.push('avoids ' + best.hol.name);
+      else if (overlapsHoliday) fragments.push('note: overlaps ' + best.hol.name);
+      else fragments.push('no major holiday conflicts');
+    }
+
+    return {
+      startDate: toISODate(startDate),
+      endDate: toISODate(endDate),
+      reason: 'Recommended: ' + formatRange(startDate, endDate) + ' — ' + fragments.join(', ')
+    };
+  }
+
+  function resolveDates(data){
+    if (data.dates.mode === 'specific'){
+      return { startDate: data.dates.startDate, endDate: data.dates.endDate, reason: null };
+    }
+    return resolveGeneralWindow(data);
+  }
+
+  // Exposed for testing (pure/deterministic given a fixed `now`).
+  window.resolveGeneralWindow = resolveGeneralWindow;
+
   // ---------- Collect + submit ----------
   function collectFormData(){
     var months = [];
@@ -535,7 +764,7 @@
     var otherReqs = [];
     $('otherReqs').querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb){ otherReqs.push(cb.value); });
 
-    return {
+    var data = {
       dates: {
         mode: state.dateMode,
         months: state.dateMode === 'general' ? months : [],
@@ -565,6 +794,10 @@
       otherRequirements: otherReqs,
       submittedAt: new Date().toISOString()
     };
+    // Resolve the general window to one concrete date range (or mirror the
+    // user's own specific dates) so later stories can consume dates.resolved.
+    data.dates.resolved = resolveDates(data);
+    return data;
   }
 
   function summarize(data){
@@ -595,6 +828,12 @@
     } catch (err) { /* storage unavailable (e.g. private mode) — in-memory copy still set */ }
 
     $('confirmationSummary').textContent = summarize(data);
+    var rationale = $('dateRationale');
+    if (data.dates.mode === 'general' && data.dates.resolved){
+      rationale.textContent = '📅 ' + data.dates.resolved.reason;
+    } else {
+      rationale.textContent = '📅 ' + formatISODate(data.dates.startDate) + ' – ' + formatISODate(data.dates.endDate);
+    }
     $('intakeForm').style.display = 'none';
     $('confirmationCard').classList.add('visible');
     window.scrollTo({ top: 0, behavior: 'smooth' });

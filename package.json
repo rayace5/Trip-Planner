@@ -1,0 +1,28 @@
+{
+  "name": "trip_planner",
+  "version": "1.0.0",
+  "description": "A mobile-friendly trip planner website",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rayace5/Trip-Planner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rayace5/Trip-Planner/issues"
+  },
+  "homepage": "https://github.com/rayace5/Trip-Planner#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "serve": "^14.2.6"
+  }
+}

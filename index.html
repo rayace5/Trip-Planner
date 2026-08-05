@@ -184,6 +184,18 @@
   .route-nights-input{width:52px; border:1.5px solid var(--gray-300); border-radius:8px; padding:5px 6px; font-size:12.5px; font-family:inherit; text-align:center;}
   .route-total{font-size:13px; font-weight:700; color:var(--gray-600); margin-bottom:8px;}
 
+  /* Inter-city transport legs (results) */
+  .legs-section{display:none; margin:28px 0 32px;}
+  .legs-section.visible{display:block;}
+  .leg-block{margin-bottom:30px;}
+  .leg-label{
+    font-size:10px; font-weight:800; color:var(--coral); background:var(--coral-soft);
+    padding:8px 12px; border-radius:999px; margin-bottom:12px; display:inline-block; letter-spacing:.04em;
+  }
+  .leg-block .section-heading{margin:0 0 16px;}
+  .option-card .price{font-size:22px; font-weight:900; margin:6px 0 8px;}
+  .option-card .price span{font-size:12px; font-weight:600; color:var(--gray-600);}
+
   @media (max-width:760px){
     .topbar{padding:14px 20px;}
     .stage{padding:28px 20px 80px;}
@@ -217,6 +229,10 @@
     <div class="section-heading"><h2>Your route</h2><span class="live-badge">EDIT NIGHTS PER STOP</span></div>
     <div class="route-stepper" id="routeStepper"></div>
     <div class="route-total" id="routeTotal" aria-live="polite"></div>
+  </div>
+
+  <div class="legs-section" id="legsSection" aria-label="Inter-city transport options">
+    <div id="legsContainer"></div>
   </div>
 
   <div class="dest-options" id="destOptionsSection" aria-label="Destination options">
@@ -1290,12 +1306,16 @@
     };
     // The new option's per-stop allocation now drives the trip length.
     recomputeResolvedEnd(data);
+    // Switching options can change the route's cities, so the inter-city
+    // legs are rebuilt (keeping selections for legs that still exist).
+    data.legs = buildLegs(data, data.legs);
     persistData(data);
-    // Keep the confirmation card's route + dates and the route stepper in
-    // sync with the chosen option.
+    // Keep the confirmation card's route + dates, the route stepper, and the
+    // inter-city legs in sync with the chosen option.
     $('confirmationSummary').textContent = summarize(data);
     renderDateLine(data);
     renderRouteStepper(data);
+    renderLegs(data);
   }
 
   function renderDestinationOptions(data){
@@ -1500,6 +1520,321 @@
     section.classList.add('visible');
   }
 
+  // ---------- Inter-city transport legs ----------
+  // Deterministic v1: for each consecutive pair of stops in the active route,
+  // propose 2–3 transport options across modes (drive / train / flight — plus
+  // ferry for one island pair) from a small honest city-pair dataset, with a
+  // generic clearly-"estimated" fallback for unknown pairs. Exactly one option
+  // per leg is Recommended with a stated reason:
+  //   1. short hop (drive ≤ ~4.5h and no faster train) → drive, most flexible;
+  //   2. usable train (≤ ~4.5h city-center to city-center) → train;
+  //   3. otherwise → fastest door-to-door option (usually flight).
+  // "No rental car" in Other Requirements excludes drive options entirely; if
+  // drive would have won, the recommendation falls to the next best and the
+  // reason says so. Prices are honest round numbers PER GROUP: per-person
+  // fares × traveler count for train/flight/ferry, per-car pricing for drive
+  // (one rental per 4 travelers).
+  var NO_RENTAL_REQ = 'No rental car';
+
+  var LEG_MODE_LABELS = { drive:'Drive (rental car)', train:'Train', flight:'Nonstop flight', ferry:'Ferry' };
+  var LEG_MODE_TRADEOFFS = {
+    drive:'Full flexibility for detours, but fuel, tolls, and parking are on you',
+    train:'Relaxed and city-center to city-center, but fixed departure times',
+    flight:'Shortest time in the air, but airport time and luggage limits add up',
+    ferry:'Scenic and cheap, but slow and weather-dependent'
+  };
+
+  // Known city pairs (order-insensitive keyword match). fare = per person;
+  // base = per rental car. hrs = realistic door-to-door hours for ranking.
+  var CITY_PAIRS = [
+    { a:['austin'], b:['dallas'],
+      drive:{ dur:'3h10m', hrs:3.2, base:95, detail:'I-35 N' },
+      train:{ label:'Amtrak Texas Eagle', dur:'5h40m', hrs:5.7, fare:22, detail:'One daily departure each way',
+        tradeoff:'Cheapest, but slowest — and it sells out on weekends' },
+      flight:{ dur:'55m flight · ≈2h30m door-to-door', hrs:2.5, fare:84, detail:'AUS–DAL (Love Field)',
+        tradeoff:'Faster door-to-door, pricier' } },
+    { a:['austin'], b:['san antonio'],
+      drive:{ dur:'1h20m', hrs:1.4, base:55, detail:'I-35 S' },
+      train:{ label:'Amtrak Texas Eagle', dur:'2h45m', hrs:2.8, fare:16, detail:'One daily departure each way' } },
+    { a:['london'], b:['paris'],
+      train:{ label:'Eurostar', dur:'2h16m', hrs:2.3, fare:120, detail:'St Pancras → Gare du Nord' },
+      flight:{ dur:'1h20m flight · ≈4h door-to-door', hrs:4, fare:110, detail:'LHR/LGW–CDG' },
+      drive:{ dur:'5h45m incl. Channel crossing', hrs:5.8, base:260, detail:'Via LeShuttle, Folkestone–Calais',
+        tradeoff:'Rarely worth it — crossing fees plus central-Paris parking' } },
+    { a:['london'], b:['edinburgh'],
+      train:{ label:'LNER Azuma', dur:'4h20m', hrs:4.4, fare:90, detail:"King's Cross → Waverley" },
+      flight:{ dur:'1h25m flight · ≈4h door-to-door', hrs:4, fare:85, detail:'LHR/LGW–EDI' },
+      drive:{ dur:'7h30m', hrs:7.5, base:210, detail:'M1/A1 north' } },
+    { a:['tokyo'], b:['kyoto'],
+      train:{ label:'Shinkansen Nozomi', dur:'2h15m', hrs:2.3, fare:95, detail:'Tokyo Sta. → Kyoto Sta., trains every ~10 min' },
+      flight:{ dur:'1h15m flight · ≈4h door-to-door', hrs:4, fare:90, detail:'HND–ITM (Osaka), then train into Kyoto' },
+      drive:{ dur:'5h30m', hrs:5.5, base:190, detail:'Tomei/Shin-Tomei expressways',
+        tradeoff:'Steep tolls and scarce city parking' } },
+    { a:['kyoto'], b:['osaka'],
+      train:{ label:'JR Special Rapid', dur:'29m', hrs:0.5, fare:6, detail:'Kyoto Sta. → Osaka Sta., every ~15 min' },
+      drive:{ dur:'1h10m', hrs:1.2, base:45, detail:'Meishin Expressway' } },
+    { a:['lisbon'], b:['porto'],
+      train:{ label:'Alfa Pendular', dur:'2h50m', hrs:2.9, fare:28, detail:'Santa Apolónia → Campanhã' },
+      drive:{ dur:'3h00m', hrs:3.1, base:90, detail:'A1 motorway, tolls' },
+      flight:{ dur:'55m flight · ≈3h door-to-door', hrs:3, fare:65, detail:'LIS–OPO' } },
+    { a:['rome'], b:['florence'],
+      train:{ label:'Frecciarossa', dur:'1h32m', hrs:1.6, fare:45, detail:'Termini → Santa Maria Novella' },
+      drive:{ dur:'3h00m', hrs:3.1, base:110, detail:'A1 Autostrada',
+        tradeoff:'Restricted ZTL driving zones in both historic centers' } },
+    { a:['madrid'], b:['seville'],
+      train:{ label:'AVE high-speed', dur:'2h30m', hrs:2.5, fare:60, detail:'Atocha → Santa Justa' },
+      flight:{ dur:'1h05m flight · ≈3h door-to-door', hrs:3, fare:80, detail:'MAD–SVQ' },
+      drive:{ dur:'5h15m', hrs:5.3, base:150, detail:'A-4 south' } },
+    { a:['paris'], b:['nice'],
+      flight:{ dur:'1h35m flight · ≈4h door-to-door', hrs:4, fare:95, detail:'ORY/CDG–NCE' },
+      train:{ label:'TGV InOui', dur:'5h50m', hrs:5.9, fare:70, detail:'Gare de Lyon → Nice-Ville' },
+      drive:{ dur:'8h45m', hrs:8.8, base:280, detail:'A6/A7 south' } },
+    { a:['dublin'], b:['galway'],
+      train:{ label:'Irish Rail', dur:'2h30m', hrs:2.5, fare:25, detail:'Heuston → Galway (Ceannt)' },
+      drive:{ dur:'2h30m', hrs:2.6, base:80, detail:'M6 west' } },
+    { a:['bangkok'], b:['chiang mai'],
+      flight:{ dur:'1h20m flight · ≈3h30m door-to-door', hrs:3.5, fare:45, detail:'BKK/DMK–CNX, frequent departures' },
+      train:{ label:'Overnight sleeper train', dur:'13h', hrs:13, fare:30, detail:'Sleeps a hotel night away',
+        tradeoff:'Cheapest and saves a lodging night, but most of a day in transit' },
+      drive:{ dur:'9h', hrs:9.2, base:160, detail:'Highway 1 north' } },
+    { a:['sydney'], b:['melbourne'],
+      flight:{ dur:'1h35m flight · ≈4h door-to-door', hrs:4, fare:90, detail:'SYD–MEL, shuttle frequency' },
+      train:{ label:'NSW TrainLink XPT', dur:'11h', hrs:11, fare:65, detail:'Central → Southern Cross' },
+      drive:{ dur:'9h', hrs:9, base:220, detail:'Hume Highway' } },
+    { a:['mexico city'], b:['oaxaca'],
+      flight:{ dur:'1h05m flight · ≈3h door-to-door', hrs:3, fare:70, detail:'MEX–OAX' },
+      drive:{ dur:'5h30m', hrs:5.6, base:140, detail:'Toll highway 135D' } },
+    { a:['athens'], b:['santorini'],
+      flight:{ dur:'50m flight · ≈3h door-to-door', hrs:3, fare:90, detail:'ATH–JTR' },
+      ferry:{ label:'Blue Star ferry', dur:'7h45m', hrs:7.8, fare:45, detail:'Piraeus → Athinios port',
+        tradeoff:'Cheap and scenic, but takes most of a day' } },
+    { a:['las vegas'], b:['grand canyon'],
+      drive:{ dur:'4h15m', hrs:4.3, base:130, detail:'US-93 → I-40; park entry not included' },
+      flight:{ label:'Scenic air transfer', dur:'70m flight · ≈3h door-to-door', hrs:3, fare:240, detail:'LAS–GCN, small aircraft',
+        tradeoff:'Spectacular canyon views, premium price' } }
+  ];
+
+  // Honest medium-distance assumption for pairs we don't have on file.
+  var GENERIC_LEG = {
+    drive:{ dur:'≈4h30m (estimated)', hrs:4.5, base:120,
+      detail:"We don't have this city pair on file — medium distance assumed",
+      tradeoff:'Most flexible; time and cost are rough estimates' },
+    train:{ label:'Train or intercity bus', dur:'≈5h30m (estimated)', hrs:5.5, fare:35,
+      detail:'Service availability varies on this route — estimated',
+      tradeoff:'Usually cheapest where a direct service runs — schedules not verified' },
+    flight:{ label:'Flight', dur:'≈1h15m flight · ≈3h30m door-to-door (estimated)', hrs:3.5, fare:130,
+      detail:'Assumes a direct or one-stop regional flight — estimated',
+      tradeoff:'Fastest if a direct route exists; fares are rough estimates' }
+  };
+
+  function matchCityPair(fromName, toName){
+    var f = String(fromName || '').toLowerCase();
+    var t = String(toName || '').toLowerCase();
+    function hits(keys, text){
+      return keys.some(function(k){ return text.indexOf(k) !== -1; });
+    }
+    for (var i = 0; i < CITY_PAIRS.length; i++){
+      var p = CITY_PAIRS[i];
+      if ((hits(p.a, f) && hits(p.b, t)) || (hits(p.a, t) && hits(p.b, f))) return p;
+    }
+    return null;
+  }
+
+  // "2 adults, 2 kids (ages 5 and 8)" -> 4; "solo" -> 1; bare "3" -> 3; blank -> 2.
+  function parseTravelerCount(text){
+    var t = String(text || '').toLowerCase();
+    if (!t.trim()) return 2;
+    if (/\bsolo\b|just me|by myself/.test(t)) return 1;
+    var total = 0, m;
+    var re = /(\d+)\s*(?:adults?|kids?|children|child|teen(?:ager)?s?|people|persons?|pax|travell?ers?|couples?)/g;
+    while ((m = re.exec(t))) total += parseInt(m[1], 10) * (/couples?/.test(m[0]) ? 2 : 1);
+    if (!total){
+      var first = t.match(/\d+/);
+      total = first ? parseInt(first[0], 10) : 2;
+    }
+    return Math.min(Math.max(total, 1), 16);
+  }
+
+  function roundTo5(n){ return Math.max(5, Math.round(n / 5) * 5); }
+
+  function legOptionPrice(spec, travelers){
+    if (spec.base != null) return roundTo5(spec.base * Math.ceil(travelers / 4)); // per rental car
+    return roundTo5(spec.fare * travelers); // per-person fare × group
+  }
+
+  function buildLegOption(mode, spec, travelers, estimated){
+    return {
+      mode: mode,
+      label: spec.label || LEG_MODE_LABELS[mode],
+      hrs: spec.hrs,
+      duration: spec.dur,
+      price: legOptionPrice(spec, travelers),
+      detail: spec.detail || '',
+      tradeoff: spec.tradeoff || LEG_MODE_TRADEOFFS[mode],
+      estimated: !!estimated,
+      recommended: false,
+      recommendedReason: null
+    };
+  }
+
+  // Recommendation rules (see block comment above). Returns { index, reason }.
+  function pickRecommendedLegOption(options){
+    var drive = null, train = null;
+    options.forEach(function(o, i){
+      if (o.mode === 'drive' && !drive) drive = { o: o, i: i };
+      if (o.mode === 'train' && !train) train = { o: o, i: i };
+    });
+    if (drive && drive.o.hrs <= 4.5 && (!train || train.o.hrs >= drive.o.hrs)){
+      var cheapest = options.every(function(o){ return o === drive.o || o.price >= drive.o.price; });
+      var approxH = Math.max(1, Math.round(drive.o.hrs));
+      return { index: drive.i, reason: (cheapest ? 'Cheapest and most flexible' : 'Most flexible') +
+        ' for a ~' + approxH + '-hour hop — door-to-door on your own schedule' };
+    }
+    if (train && train.o.hrs <= 4.5){
+      return { index: train.i, reason: 'Fast city-center to city-center — no airport overhead' };
+    }
+    var fi = 0;
+    options.forEach(function(o, i){ if (o.hrs < options[fi].hrs) fi = i; });
+    return { index: fi, reason: 'Fastest door-to-door option for this leg' };
+  }
+
+  function generateLegOptions(fromStop, toStop, data){
+    var fromName = (fromStop && fromStop.name) || fromStop || '';
+    var toName = (toStop && toStop.name) || toStop || '';
+    data = data || {};
+    var travelers = parseTravelerCount(data.travelers && data.travelers.whoIsGoing);
+    var noRental = (data.otherRequirements || []).indexOf(NO_RENTAL_REQ) !== -1;
+    var pair = matchCityPair(fromName, toName);
+    var src = pair || GENERIC_LEG;
+    var estimated = !pair;
+
+    var all = [];
+    ['drive', 'train', 'flight', 'ferry'].forEach(function(mode){
+      if (src[mode]) all.push(buildLegOption(mode, src[mode], travelers, estimated));
+    });
+
+    // PRD: "no rental car" checked -> drive options excluded for the leg.
+    var options = noRental ? all.filter(function(o){ return o.mode !== 'drive'; }) : all.slice();
+
+    // Every leg gets at least 2 options: top up from the generic set with a
+    // mode the leg doesn't already have (clearly marked as estimated).
+    ['train', 'flight'].forEach(function(mode){
+      if (options.length >= 2) return;
+      if (options.some(function(o){ return o.mode === mode; })) return;
+      options.push(buildLegOption(mode, GENERIC_LEG[mode], travelers, true));
+    });
+
+    var pick = pickRecommendedLegOption(options);
+    var reason = pick.reason;
+    if (noRental && options.length !== all.length){
+      var unfiltered = pickRecommendedLegOption(all);
+      if (all[unfiltered.index].mode === 'drive'){
+        reason += ' — drive excluded per your "No rental car" preference';
+      }
+    }
+    if (options[pick.index].estimated){
+      reason += ' (times and prices are rough estimates for this route)';
+    }
+    options[pick.index].recommended = true;
+    options[pick.index].recommendedReason = reason;
+    return options;
+  }
+
+  // Exposed for testing (pure/deterministic given the intake data).
+  window.generateLegOptions = generateLegOptions;
+
+  // One leg per consecutive stop pair on the active route. Selection defaults
+  // to the recommended option; when rebuilding (e.g. after switching a flexible
+  // destination option), a previous selection is kept if the same from→to leg
+  // still exists and still offers that option.
+  function buildLegs(data, prevLegs){
+    var stops = activeStops(data);
+    var legs = [];
+    for (var i = 0; i + 1 < stops.length; i++){
+      var from = stops[i].name, to = stops[i + 1].name;
+      var options = generateLegOptions(from, to, data);
+      var rec = null;
+      options.forEach(function(o){ if (!rec && o.recommended) rec = o; });
+      var selected = rec ? rec.label : (options[0] ? options[0].label : null);
+      if (prevLegs){
+        for (var k = 0; k < prevLegs.length; k++){
+          var p = prevLegs[k];
+          if (p.from === from && p.to === to &&
+              options.some(function(o){ return o.label === p.selected; })){
+            selected = p.selected;
+            break;
+          }
+        }
+      }
+      legs.push({ from: from, to: to, options: options, selected: selected });
+    }
+    return legs;
+  }
+
+  // Leg numbering starts at 2: leg 1 is reserved for the arrival flight
+  // (origin → first stop), which is a separate later story — matching the
+  // mockup's "LEG 2 · AUSTIN → DALLAS (INTER-CITY)" labeling.
+  function renderLegs(data){
+    var section = $('legsSection');
+    var container = $('legsContainer');
+    container.innerHTML = '';
+    var legs = data.legs || [];
+    if (!legs.length){
+      section.classList.remove('visible');
+      return;
+    }
+    legs.forEach(function(leg, li){
+      var block = document.createElement('div');
+      block.className = 'leg-block';
+      block.setAttribute('data-leg-index', String(li));
+      block.setAttribute('data-leg-from', leg.from);
+      block.setAttribute('data-leg-to', leg.to);
+
+      var label = document.createElement('div');
+      label.className = 'leg-label';
+      label.textContent = 'LEG ' + (li + 2) + ' · ' + leg.from.toUpperCase() + ' → ' + leg.to.toUpperCase() + ' (INTER-CITY)';
+      block.appendChild(label);
+
+      var heading = document.createElement('div');
+      heading.className = 'section-heading';
+      heading.innerHTML = '<h2>Inter-city transport options</h2>';
+      block.appendChild(heading);
+
+      var grid = document.createElement('div');
+      grid.className = 'card-grid';
+      var selIdx = 0;
+      for (var si = 0; si < leg.options.length; si++){
+        if (leg.options[si].label === leg.selected){ selIdx = si; break; }
+      }
+      leg.options.forEach(function(opt, oi){
+        var card = document.createElement('div');
+        card.className = 'option-card' + (oi === selIdx ? ' selected' : '');
+        card.setAttribute('role', 'button');
+        card.setAttribute('data-leg-option-index', String(oi));
+        card.setAttribute('data-leg-option-mode', opt.mode);
+        card.setAttribute('data-leg-option-label', opt.label);
+        card.innerHTML =
+          (opt.recommended ? '<span class="rec-badge">RECOMMENDED</span>' : '') +
+          '<div class="select-dot"></div>' +
+          '<div class="name">' + escapeHtml(opt.label) + '</div>' +
+          '<div class="price">$' + opt.price + ' <span>total</span></div>' +
+          '<div class="detail">' + escapeHtml(opt.duration + (opt.detail ? ' · ' + opt.detail : '')) + '</div>' +
+          '<div class="tradeoff">' + escapeHtml(opt.tradeoff) + '</div>' +
+          (opt.recommended ? '<div class="tradeoff rec">' + escapeHtml(opt.recommendedReason) + '</div>' : '');
+        card.addEventListener('click', function(){
+          grid.querySelectorAll('.option-card').forEach(function(c){ c.classList.remove('selected'); });
+          card.classList.add('selected');
+          leg.selected = opt.label;
+          persistData(data);
+        });
+        grid.appendChild(card);
+      });
+      block.appendChild(grid);
+      container.appendChild(block);
+    });
+    section.classList.add('visible');
+  }
+
   // ---------- Collect + submit ----------
   function collectFormData(){
     var months = [];
@@ -1563,6 +1898,10 @@
     // If the per-stop allocation sums differently than the resolved range
     // (e.g. user-specified nights), the end date follows the nights.
     recomputeResolvedEnd(data);
+    // Inter-city transport legs between consecutive stops (empty for
+    // single-stop trips), each with the recommended option pre-selected.
+    // Resubmission regenerates from scratch.
+    data.legs = buildLegs(data, null);
     return data;
   }
 
@@ -1610,6 +1949,7 @@
     renderDateLine(data);
     renderDestinationOptions(data);
     renderRouteStepper(data);
+    renderLegs(data);
     $('intakeForm').style.display = 'none';
     $('confirmationCard').classList.add('visible');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1618,6 +1958,7 @@
   $('editAgainBtn').addEventListener('click', function(){
     $('confirmationCard').classList.remove('visible');
     $('routeSection').classList.remove('visible');
+    $('legsSection').classList.remove('visible');
     $('destOptionsSection').classList.remove('visible');
     $('intakeForm').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });

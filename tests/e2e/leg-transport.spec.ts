@@ -272,12 +272,11 @@ test.describe('generateLegOptions: "No rental car" requirement', () => {
     expect(rec.recommendedReason).toContain(
       'Fast city-center to city-center — no airport overhead'
     );
-    // KNOWN BUG (reported, not fixed here): the drive would have won this leg,
-    // so the reason should also carry the '— drive excluded per your "No
-    // rental car" preference' suffix. generateLegOptions detects an excluded
-    // drive via `options.length !== all.length`, and the generic top-up
-    // restores the count (2 == 2), so the disclosure is skipped exactly when
-    // a pair had ≤2 real options including a drive.
+    // The drive would have won this leg, so even though the generic top-up
+    // restores the option count, the reason still discloses the exclusion.
+    expect(rec.recommendedReason).toContain(
+      '— drive excluded per your "No rental car" preference'
+    );
   });
 });
 

@@ -1714,6 +1714,7 @@
     });
 
     // PRD: "no rental car" checked -> drive options excluded for the leg.
+    var driveExcluded = noRental && all.some(function(o){ return o.mode === 'drive'; });
     var options = noRental ? all.filter(function(o){ return o.mode !== 'drive'; }) : all.slice();
 
     // Every leg gets at least 2 options: top up from the generic set with a
@@ -1726,7 +1727,10 @@
 
     var pick = pickRecommendedLegOption(options);
     var reason = pick.reason;
-    if (noRental && options.length !== all.length){
+    if (driveExcluded){
+      // Disclose the constraint whenever the drive would have won the
+      // pre-exclusion recommendation (length comparisons don't work here:
+      // the generic top-up can restore the option count).
       var unfiltered = pickRecommendedLegOption(all);
       if (all[unfiltered.index].mode === 'drive'){
         reason += ' — drive excluded per your "No rental car" preference';

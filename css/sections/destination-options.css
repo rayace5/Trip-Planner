@@ -1,0 +1,5 @@
+/* Section: Destination options — flexible-destination proposal styles (cards shared via base). */
+/* Destination options (flexible destinations only) */
+.dest-options{display:none; margin:28px 0 32px;}
+.dest-options.visible{display:block;}
+.dest-options .options-sub{color:var(--gray-600); font-size:13.5px; margin:0 0 20px;}

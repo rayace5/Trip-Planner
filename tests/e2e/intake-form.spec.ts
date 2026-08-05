@@ -222,7 +222,7 @@ test.describe('Destination — I know where', () => {
     await expect(page.locator('.stop-row .stop-name')).toHaveText('Paris');
   });
 
-  test('nights are optional: blank persists null, a value persists as a number', async ({ page }) => {
+  test('nights are optional: blank is auto-allocated from the trip length at submit, a value persists as-is', async ({ page }) => {
     await fillRequiredFields(page); // adds "London" with nights left blank
     await addStop(page, 'Paris');
     await page.locator('.stop-row', { hasText: 'Paris' }).locator('.nights-input').fill('4');
@@ -230,8 +230,10 @@ test.describe('Destination — I know where', () => {
     await expect(page.locator('#confirmationCard')).toBeVisible();
     const data = await readStored(page);
     expect(data.destination.mode).toBe('known');
+    // No trip length stated -> default 7-night trip; Paris keeps its explicit
+    // 4 nights and London (left blank) receives the remaining 3.
     expect(data.destination.stops).toEqual([
-      { name: 'London', nights: null },
+      { name: 'London', nights: 3 },
       { name: 'Paris', nights: 4 },
     ]);
   });
@@ -482,7 +484,9 @@ test.describe('Submission', () => {
     expect(data).toMatchObject({
       dates: { mode: 'general', months: ['Jun'], year: 2026, tripLength: '7-10 days', startDate: null, endDate: null },
       departingFrom: 'Austin',
-      destination: { mode: 'known', stops: [{ name: 'London', nights: null }], regions: [] },
+      // Blank nights are auto-allocated at submission: "7-10 days" resolves
+      // to an 8-night trip, all of it assigned to the single blank stop.
+      destination: { mode: 'known', stops: [{ name: 'London', nights: 8 }], regions: [] },
       budget: { amount: 3000, scope: 'per-person', flightsLodging: 'included' },
       travelers: { purpose: 'Anniversary', whoIsGoing: '2 adults', constraints: '' },
       tripStyle: 'Balanced mix',

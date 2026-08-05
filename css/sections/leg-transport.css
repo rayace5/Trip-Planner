@@ -1,0 +1,12 @@
+/* Section: Inter-city transport legs — leg blocks, labels, and price styles. */
+/* Inter-city transport legs (results) */
+.legs-section{display:none; margin:28px 0 32px;}
+.legs-section.visible{display:block;}
+.leg-block{margin-bottom:30px;}
+.leg-label{
+  font-size:10px; font-weight:800; color:var(--coral); background:var(--coral-soft);
+  padding:8px 12px; border-radius:999px; margin-bottom:12px; display:inline-block; letter-spacing:.04em;
+}
+.leg-block .section-heading{margin:0 0 16px;}
+.option-card .price{font-size:22px; font-weight:900; margin:6px 0 8px;}
+.option-card .price span{font-size:12px; font-weight:600; color:var(--gray-600);}

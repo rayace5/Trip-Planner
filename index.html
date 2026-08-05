@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultimate Trip Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/sections/departure-destination.css">
+<link rel="stylesheet" href="css/sections/trip-style.css">
+<link rel="stylesheet" href="css/sections/other-requirements.css">
+<link rel="stylesheet" href="css/sections/submission.css">
+<link rel="stylesheet" href="css/sections/destination-options.css">
+<link rel="stylesheet" href="css/sections/route-stepper.css">
+<link rel="stylesheet" href="css/sections/leg-transport.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><div class="brand-mark">✈</div>Ultimate Trip</div>
+</div>
+
+<!-- ============ INPUT STAGE ============ -->
+<div class="stage active" id="stage-input">
+  <h1 class="page-title">Let's plan your ultimate trip</h1>
+  <p class="page-sub">Answer a few questions and we'll build a complete, bookable itinerary — flights, lodging, day-by-day plan, and budget.</p>
+
+  <div class="error-banner" id="errorBanner" role="alert" aria-live="assertive"></div>
+
+  <div class="confirmation-card" id="confirmationCard">
+    <div class="check-mark">✓</div>
+    <h2>Your trip details are in!</h2>
+    <p>We've saved your preferences. Next up: we'll research flights, lodging, and a day-by-day plan and build your full trip.</p>
+    <div class="summary-line" id="confirmationSummary"></div>
+    <div class="date-rationale" id="dateRationale"></div>
+    <button type="button" class="edit-again-btn" id="editAgainBtn">← Edit my answers</button>
+  </div>
+
+  <div class="route-section" id="routeSection" aria-label="Your route">
+    <div class="section-heading"><h2>Your route</h2><span class="live-badge">EDIT NIGHTS PER STOP</span></div>
+    <div class="route-stepper" id="routeStepper"></div>
+    <div class="route-total" id="routeTotal" aria-live="polite"></div>
+  </div>
+
+  <div class="legs-section" id="legsSection" aria-label="Inter-city transport options">
+    <div id="legsContainer"></div>
+  </div>
+
+  <div class="dest-options" id="destOptionsSection" aria-label="Destination options">
+    <div class="section-heading"><h2>Destination options</h2></div>
+    <p class="options-sub">You said you're flexible — here are the best-fit destinations for what you told us. Pick one and the rest of your trip will be built around it (you can switch anytime).</p>
+    <div class="card-grid" id="destOptionsGrid"></div>
+  </div>
+
+  <form id="intakeForm" novalidate>
+
+    <div class="section-card" id="datesSection">
+      <div class="section-title">Dates</div>
+      <div class="pill-group" style="margin-bottom:16px;" id="dateModePills">
+        <div class="pill" data-date-mode="specific">Specific dates</div><div class="pill selected" data-date-mode="general">General window</div>
+      </div>
+      <div class="field-row" id="specificDatesFields" style="display:none;">
+        <div class="field"><label for="startDate">Start date</label><input class="input" type="date" id="startDate"></div>
+        <div class="field"><label for="endDate">End date</label><input class="input" type="date" id="endDate"></div>
+      </div>
+      <div id="generalWindowFields">
+        <div class="field">
+          <label>Which month(s) work? <span style="font-weight:400; color:var(--gray-600);">(select any that apply)</span></label>
+          <div class="pill-group" id="monthChips">
+            <div class="chip" data-month="Jan">Jan</div><div class="chip" data-month="Feb">Feb</div><div class="chip" data-month="Mar">Mar</div><div class="chip" data-month="Apr">Apr</div>
+            <div class="chip" data-month="May">May</div><div class="chip" data-month="Jun">Jun</div><div class="chip" data-month="Jul">Jul</div><div class="chip" data-month="Aug">Aug</div>
+            <div class="chip" data-month="Sep">Sep</div><div class="chip" data-month="Oct">Oct</div><div class="chip" data-month="Nov">Nov</div><div class="chip" data-month="Dec">Dec</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Year</label>
+            <div class="pill-group" id="yearPills"><div class="pill selected" data-year="2026">2026</div><div class="pill" data-year="2027">2027</div></div>
+          </div>
+          <div class="field"><label for="tripLength">Trip length</label><input class="input" id="tripLength" placeholder="e.g. 7–10 days"></div>
+        </div>
+        <div class="helper">We'll recommend the best exact dates within your selected months — based on typical weather, local events/holidays, and price/crowd patterns for your destination.</div>
+      </div>
+    </div>
+
+    <div class="section-card" id="destSection">
+      <div class="section-title">Departure &amp; destination</div>
+      <div class="field-row">
+        <div class="field"><label for="departingFrom">Departing from</label><input class="input" id="departingFrom" placeholder="City or airport"></div>
+        <div class="field">
+          <label>Destination</label>
+          <div class="pill-group" style="margin-bottom:10px;" id="destModePills"><div class="pill selected" data-dest-mode="known">I know where</div><div class="pill" data-dest-mode="flexible">I'm flexible</div></div>
+          <div id="fixedDestField" style="display:block;">
+            <div class="stop-list" id="stopList"></div>
+            <input class="input" id="addStopInput" placeholder="Add another city or country and press Enter">
+            <div class="helper" id="stopHelper">Add one stop for a single destination, or multiple stops in visit order for a multi-city trip (e.g., Austin → Dallas, or London → Paris → Amsterdam). Drag ⠿ or use ↑ / ↓ to reorder; leave nights blank to split evenly. <b>Max 6 stops.</b></div>
+            <div class="helper limit-msg" id="stopLimitMsg" style="display:none;">Stop limit reached (6/6) — remove a stop to add a different one.</div>
+          </div>
+          <div id="flexibleDestField" style="display:none;">
+            <div class="pill-group" style="margin-bottom:10px;" id="regionChipList"></div>
+            <input class="input" id="addRegionInput" placeholder="Add another region, country, or city and press Enter">
+            <div class="helper">Add as many locations of interest as you'd like — we'll narrow down the best fit, including proposing a multi-stop combination if it fits (e.g., "Europe" → a London + Paris option).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" id="budgetSection">
+      <div class="section-title">Budget</div>
+      <div class="field-row triple">
+        <div class="field"><label for="budgetAmount">Total budget</label><input class="input" id="budgetAmount" inputmode="decimal" placeholder="$"></div>
+        <div class="field"><label>Per person or group?</label><div class="pill-group" id="budgetScopePills"><div class="pill selected" data-budget-scope="per-person">Per person</div><div class="pill" data-budget-scope="group">Group total</div></div></div>
+        <div class="field"><label>Includes flights &amp; lodging?</label><div class="pill-group" id="budgetIncludesPills"><div class="pill selected" data-budget-includes="included">Included</div><div class="pill" data-budget-includes="separate">Separate</div></div></div>
+      </div>
+    </div>
+
+    <div class="section-card" id="travelersSection">
+      <div class="section-title">Trip goal &amp; travelers</div>
+      <div class="field-row">
+        <div class="field"><label for="tripPurpose">Purpose of the trip</label><input class="input" id="tripPurpose" placeholder="e.g. anniversary, family reunion"></div>
+        <div class="field"><label for="whoIsGoing">Who's going</label><input class="input" id="whoIsGoing" placeholder="# adults, # kids + ages"></div>
+      </div>
+      <div class="field"><label for="constraints">Mobility / dietary constraints <span style="font-weight:400; color:var(--gray-600);">(optional)</span></label><input class="input" id="constraints" placeholder="Optional"></div>
+    </div>
+
+    <div class="section-card" id="styleSection">
+      <div class="section-title">Trip style</div>
+      <div class="style-slider">
+        <input type="range" class="style-range" id="styleRange" min="0" max="3" step="1" value="3" aria-label="Trip style">
+        <div class="slider-labels" id="styleLabels">
+          <span data-style-index="0">Relaxation</span><span data-style-index="1">Adventure</span><span data-style-index="2">Cultural exploration</span><span data-style-index="3" class="active">Balanced mix</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" id="mustSeeSection">
+      <div class="section-title">Must-see / must-do</div>
+      <textarea class="input" id="mustSee" placeholder="Any specific places, restaurants, or experiences you already have in mind? (optional)"></textarea>
+    </div>
+
+    <div class="section-card" id="otherReqsSection">
+      <div class="section-title">Other requirements <span style="font-weight:400; text-transform:none; color:var(--gray-600);">(optional — select any that apply)</span></div>
+      <div class="checkbox-grid" id="otherReqs">
+        <label class="checkbox-item"><input type="checkbox" value="Accessible for people with limited mobility"><span>Accessible for people with limited mobility</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Pet-friendly"><span>Pet-friendly</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Kid-friendly"><span>Kid-friendly</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="No rental car"><span>No rental car</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Walkable cities preferred"><span>Walkable cities preferred</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Travel during key special events/holidays for that destination"><span>Travel during key special events/holidays for that destination</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Looking for popular bucket list destinations and activities"><span>Looking for popular bucket list destinations and activities</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="English predominantly spoken"><span>English predominantly spoken</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Female solo travel friendly"><span>Female solo travel friendly</span></label>
+      </div>
+    </div>
+
+    <div class="cta-row"><button type="submit" class="submit-btn" id="submitBtn">Build My Trip →</button></div>
+  </form>
+</div>
+
+<!-- ============ RESULTS STAGE (placeholder — built in a later story) ============ -->
+<div class="stage" id="stage-results"></div>
+
+<script src="js/shared/utils.js"></script>
+<script src="js/shared/data.js"></script>
+<script src="js/shared/state.js"></script>
+<script src="js/shared/resolution.js"></script>
+<script src="js/sections/dates.js"></script>
+<script src="js/sections/departure-destination.js"></script>
+<script src="js/sections/budget.js"></script>
+<script src="js/sections/trip-goal-travelers.js"></script>
+<script src="js/sections/trip-style.js"></script>
+<script src="js/sections/must-see.js"></script>
+<script src="js/sections/other-requirements.js"></script>
+<script src="js/sections/submission.js"></script>
+<script src="js/sections/route-stepper.js"></script>
+<script src="js/sections/destination-options.js"></script>
+<script src="js/sections/leg-transport.js"></script>
+</body>
+</html>

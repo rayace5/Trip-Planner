@@ -1,0 +1,19 @@
+/* Section: Route stepper — horizontal route overview with editable nights per stop. */
+/* Route/stop overview (results): horizontal stepper with editable nights */
+.route-section{display:none; margin:28px 0 32px;}
+.route-section.visible{display:block;}
+.live-badge{font-size:10px; font-weight:800; color:var(--coral); background:var(--coral-soft); padding:3px 8px; border-radius:6px; letter-spacing:.03em;}
+.route-stepper{display:flex; align-items:center; gap:0; margin:14px 0 12px; flex-wrap:wrap; row-gap:14px;}
+.route-stop{background:var(--gray-100); border-radius:12px; padding:14px 20px; text-align:center; min-width:140px;}
+.route-stop .city{font-weight:800; font-size:15px;}
+.route-stop .nights{font-size:12px; color:var(--gray-600); margin-top:3px;}
+.route-connector{display:flex; flex-direction:column; align-items:center; padding:0 14px; color:var(--gray-300); font-size:20px; font-weight:700;}
+.nights-adjust{display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px;}
+.nights-adjust button{
+  width:24px; height:24px; border:1.5px solid var(--gray-300); background:#fff; border-radius:50%;
+  color:var(--ink); font-size:13px; font-weight:800; cursor:pointer; padding:0; line-height:1;
+  display:flex; align-items:center; justify-content:center; font-family:inherit;
+}
+.nights-adjust button:disabled{opacity:.35; cursor:default;}
+.route-nights-input{width:52px; border:1.5px solid var(--gray-300); border-radius:8px; padding:5px 6px; font-size:12.5px; font-family:inherit; text-align:center;}
+.route-total{font-size:13px; font-weight:700; color:var(--gray-600); margin-bottom:8px;}

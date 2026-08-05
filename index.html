@@ -1082,16 +1082,23 @@
 
     // Pick the best proposal per entered region first (so every listed region
     // is represented while there's room), then backfill to 3 with the
-    // next-best remaining proposals overall.
+    // next-best remaining proposals overall. Overlapping regions (e.g.
+    // "Thailand" + "Vietnam") can nominate the same proposal, so dedupe by
+    // name here too — higher-scored copy wins, backfill restores the count.
     var bestPerEntry = {};
     pool.forEach(function(c){
       var cur = bestPerEntry[c.entryIndex];
       if (!cur || c.score > cur.score) bestPerEntry[c.entryIndex] = c;
     });
-    var chosen = Object.keys(bestPerEntry)
+    var chosen = [];
+    Object.keys(bestPerEntry)
       .map(function(k){ return bestPerEntry[k]; })
       .sort(byScore)
-      .slice(0, 3);
+      .forEach(function(c){
+        if (chosen.length >= 3) return;
+        if (chosen.some(function(o){ return o.name === c.name; })) return;
+        chosen.push(c);
+      });
     pool.slice().sort(byScore).forEach(function(c){
       if (chosen.length >= 3) return;
       var dupe = chosen.some(function(o){ return o.name === c.name; });
@@ -1169,11 +1176,18 @@
       section.classList.remove('visible');
       return;
     }
+    // Index-keyed selection: exactly one card can be selected even if two
+    // options ever shared a display name.
     var selectedName = data.destination.selectedOption && data.destination.selectedOption.name;
-    options.forEach(function(opt){
+    var selectedIndex = 0;
+    for (var si = 0; si < options.length; si++){
+      if (options[si].name === selectedName){ selectedIndex = si; break; }
+    }
+    options.forEach(function(opt, i){
       var card = document.createElement('div');
-      card.className = 'option-card' + (opt.name === selectedName ? ' selected' : '');
+      card.className = 'option-card' + (i === selectedIndex ? ' selected' : '');
       card.setAttribute('data-option-name', opt.name);
+      card.setAttribute('data-option-index', String(i));
       card.setAttribute('role', 'button');
       var stopsLine = opt.stops.map(function(s){
         return s.nights + (s.nights === 1 ? ' night ' : ' nights ') + s.name;

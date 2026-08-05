@@ -236,6 +236,26 @@ test.describe('Destination options generator — matching and combos', () => {
     expect(supplement!.recommended).toBe(false);
   });
 
+  test('overlapping entries never produce duplicate option names (Thailand + Vietnam repro)', async ({ page }) => {
+    // Both "Thailand" and "Vietnam" (via the Southeast Asia catalog entry)
+    // nominate "Bangkok + Chiang Mai" as their best fit; the duplicate must be
+    // deduped and the count backfilled toward 3 with distinct proposals.
+    const options = await generate(
+      page,
+      makeIntake({
+        regions: ['Thailand', 'Vietnam'],
+        tripStyle: 'Balanced mix',
+        mode: 'general',
+        months: ['Jan'],
+        resolved: { startDate: '2027-01-10', endDate: '2027-01-17', reason: 'x' },
+      })
+    );
+    const names = options.map((o) => o.name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toEqual(['Bangkok + Chiang Mai', 'Bangkok', 'Singapore']);
+    recommendedOf(options); // still exactly one recommended
+  });
+
   test('with up to 3 entries, every listed region is represented by one option', async ({ page }) => {
     const options = await generate(
       page,
@@ -381,6 +401,46 @@ test.describe('Destination options UI — flexible destinations', () => {
       await recommendedCard.getAttribute('data-option-name')
     );
     expect(data.destination.selectedOption.recommended).toBe(true);
+  });
+
+  test('overlapping entries render unique cards with exactly one selected, before and after switching', async ({ page }) => {
+    await fillFlexibleForm(page, ['Thailand', 'Vietnam']);
+    await submitBtn(page).click();
+
+    await expect(page.locator('#destOptionsSection')).toBeVisible();
+    const cards = page.locator('#destOptionsGrid .option-card');
+    const count = await cards.count();
+    expect(count).toBeGreaterThanOrEqual(2);
+    expect(count).toBeLessThanOrEqual(3);
+
+    // No duplicate card names, and each card is index-keyed
+    const names: string[] = [];
+    for (let i = 0; i < count; i++) {
+      names.push((await cards.nth(i).getAttribute('data-option-name')) as string);
+      expect(await cards.nth(i).getAttribute('data-option-index')).toBe(String(i));
+    }
+    expect(new Set(names).size).toBe(names.length);
+
+    // Exactly one selected card on first render (the recommended one)
+    const selected = page.locator('#destOptionsGrid .option-card.selected');
+    await expect(selected).toHaveCount(1);
+    await expect(selected.locator('.rec-badge')).toHaveCount(1);
+
+    // Selection stays single after clicking another card (pinned by index,
+    // since :not(.selected) would re-resolve after the click)
+    const otherIndex = await page
+      .locator('#destOptionsGrid .option-card:not(.selected)')
+      .first()
+      .getAttribute('data-option-index');
+    const other = page.locator(
+      `#destOptionsGrid .option-card[data-option-index="${otherIndex}"]`
+    );
+    const otherName = await other.getAttribute('data-option-name');
+    await other.click();
+    await expect(page.locator('#destOptionsGrid .option-card.selected')).toHaveCount(1);
+    await expect(other).toHaveClass(/selected/);
+    const data = await readStored(page);
+    expect(data.destination.selectedOption.name).toBe(otherName);
   });
 
   test('fixed-destination ("I know where") submissions never render the section', async ({ page }) => {

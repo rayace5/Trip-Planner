@@ -91,6 +91,11 @@
   /* Multi-stop destination entry */
   .stop-list{display:flex; flex-direction:column; gap:8px; margin-bottom:10px;}
   .stop-row{display:flex; align-items:center; gap:10px; border:1.5px solid var(--gray-300); border-radius:10px; padding:9px 12px; background:#fff;}
+  .stop-row .drag{color:var(--gray-300); font-weight:900; cursor:grab; font-size:14px; user-select:none; -webkit-user-select:none; touch-action:none; padding:0 2px;}
+  .stop-row.dragging{opacity:.65; border-color:var(--coral); box-shadow:var(--shadow);}
+  .stop-row.dragging .drag{cursor:grabbing;}
+  .stop-row.drop-before{box-shadow:0 -10px 0 -7px var(--coral);}
+  .stop-row.drop-after{box-shadow:0 10px 0 -7px var(--coral);}
   .stop-row .stop-num{width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   .stop-row .stop-name{flex:1; font-weight:700; font-size:13.5px;}
   .stop-row .nights-input{width:76px; border:1.5px solid var(--gray-300); border-radius:8px; padding:6px 8px; font-size:12.5px; font-family:inherit; text-align:center;}
@@ -235,7 +240,7 @@
           <div id="fixedDestField" style="display:block;">
             <div class="stop-list" id="stopList"></div>
             <input class="input" id="addStopInput" placeholder="Add another city or country and press Enter">
-            <div class="helper" id="stopHelper">Add one stop for a single destination, or multiple stops in visit order for a multi-city trip (e.g., Austin → Dallas, or London → Paris → Amsterdam). Use ↑ / ↓ to reorder; leave nights blank to split evenly. <b>Max 6 stops.</b></div>
+            <div class="helper" id="stopHelper">Add one stop for a single destination, or multiple stops in visit order for a multi-city trip (e.g., Austin → Dallas, or London → Paris → Amsterdam). Drag ⠿ or use ↑ / ↓ to reorder; leave nights blank to split evenly. <b>Max 6 stops.</b></div>
             <div class="helper limit-msg" id="stopLimitMsg" style="display:none;">Stop limit reached (6/6) — remove a stop to add a different one.</div>
           </div>
           <div id="flexibleDestField" style="display:none;">
@@ -383,6 +388,7 @@
       var row = document.createElement('div');
       row.className = 'stop-row';
       row.innerHTML =
+        '<span class="drag" aria-label="Drag to reorder ' + escapeHtml(stop.name) + '" title="Drag to reorder">⠿</span>' +
         '<span class="stop-num">' + (i + 1) + '</span>' +
         '<span class="stop-name">' + escapeHtml(stop.name) + '</span>' +
         '<input class="nights-input" type="number" min="1" step="1" placeholder="nights" aria-label="Nights in ' + escapeHtml(stop.name) + '"' +
@@ -391,6 +397,9 @@
         '<button type="button" class="move-btn move-down" aria-label="Move ' + escapeHtml(stop.name) + ' down"' + (i === state.stops.length - 1 ? ' disabled' : '') + '>↓</button>' +
         '<button type="button" class="remove-x" aria-label="Remove ' + escapeHtml(stop.name) + '">×</button>';
 
+      row.querySelector('.drag').addEventListener('pointerdown', function(e){
+        startStopDrag(e, i);
+      });
       row.querySelector('.nights-input').addEventListener('input', function(e){
         var v = parseInt(e.target.value, 10);
         stop.nights = (isNaN(v) || v < 1) ? null : v;
@@ -415,6 +424,69 @@
     var atLimit = state.stops.length >= MAX_STOPS;
     $('addStopInput').disabled = atLimit;
     $('stopLimitMsg').style.display = atLimit ? 'block' : 'none';
+  }
+
+  // Pointer-based drag-to-reorder on the ⠿ handle (works for mouse and touch;
+  // the ↑ / ↓ buttons remain the keyboard-accessible path). While dragging,
+  // the source row is highlighted and a coral insertion line previews where
+  // the stop will land; state.stops is only reordered on drop.
+  function startStopDrag(e, sourceIndex){
+    if (e.button != null && e.button !== 0) return; // primary button/touch only
+    if (state.stops.length < 2) return;
+    e.preventDefault();
+    var handle = e.currentTarget;
+    var rows = Array.prototype.slice.call($('stopList').querySelectorAll('.stop-row'));
+    var others = rows.filter(function(_, idx){ return idx !== sourceIndex; });
+    rows[sourceIndex].classList.add('dragging');
+    if (e.pointerId != null && handle.setPointerCapture){
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
+    }
+
+    // Insertion index within the list *after* the source row is removed (0..n-1).
+    var insertIndex = sourceIndex;
+
+    function indexFromY(clientY){
+      var idx = 0;
+      others.forEach(function(row){
+        var r = row.getBoundingClientRect();
+        if (clientY > r.top + r.height / 2) idx++;
+      });
+      return idx;
+    }
+
+    function paintIndicator(){
+      rows.forEach(function(row){ row.classList.remove('drop-before', 'drop-after'); });
+      if (!others.length) return;
+      if (insertIndex >= others.length) others[others.length - 1].classList.add('drop-after');
+      else others[insertIndex].classList.add('drop-before');
+    }
+
+    function onMove(ev){
+      insertIndex = indexFromY(ev.clientY);
+      paintIndicator();
+    }
+    function finish(commit){
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onCancel);
+      if (commit && insertIndex !== sourceIndex){
+        var moved = state.stops.splice(sourceIndex, 1)[0];
+        state.stops.splice(insertIndex, 0, moved);
+      }
+      renderStops(); // clears .dragging/.drop-* classes and renumbers
+    }
+    function onUp(ev){
+      insertIndex = indexFromY(ev.clientY);
+      finish(true);
+    }
+    function onCancel(){ finish(false); }
+
+    // Pointer capture retargets events to the handle; they still bubble to
+    // document, so these listeners see the whole drag even outside the list.
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onCancel);
+    paintIndicator();
   }
 
   $('addStopInput').addEventListener('keydown', function(e){
@@ -1165,6 +1237,8 @@
       name: opt.name, stops: opt.stops, rationale: opt.rationale, recommended: !!opt.recommended
     };
     persistData(data);
+    // Keep the confirmation card's route in sync with the chosen option.
+    $('confirmationSummary').textContent = summarize(data);
   }
 
   function renderDestinationOptions(data){
@@ -1268,9 +1342,16 @@
   }
 
   function summarize(data){
-    var dest = data.destination.mode === 'known'
-      ? data.destination.stops.map(function(s){ return s.name; }).join(' → ')
-      : 'Flexible: ' + data.destination.regions.join(', ');
+    // Full route, all stops in visit order ("Austin → Dallas"); a single stop
+    // is just its name. Flexible trips show the selected option's route.
+    var dest;
+    if (data.destination.mode === 'known'){
+      dest = data.destination.stops.map(function(s){ return s.name; }).join(' → ');
+    } else if (data.destination.selectedOption){
+      dest = data.destination.selectedOption.stops.map(function(s){ return s.name; }).join(' → ');
+    } else {
+      dest = 'Flexible: ' + data.destination.regions.join(', ');
+    }
     var when = data.dates.mode === 'general'
       ? data.dates.months.join('/') + ' ' + data.dates.year
       : data.dates.startDate + ' – ' + data.dates.endDate;

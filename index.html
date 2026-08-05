@@ -165,6 +165,25 @@
   .option-card .tradeoff{font-size:11.5px; color:var(--gray-600); margin-top:10px; padding-top:10px; border-top:1px dashed var(--gray-300);}
   .option-card .tradeoff.rec{color:var(--coral-dark); font-weight:700;}
 
+  /* Route/stop overview (results): horizontal stepper with editable nights */
+  .route-section{display:none; margin:28px 0 32px;}
+  .route-section.visible{display:block;}
+  .live-badge{font-size:10px; font-weight:800; color:var(--coral); background:var(--coral-soft); padding:3px 8px; border-radius:6px; letter-spacing:.03em;}
+  .route-stepper{display:flex; align-items:center; gap:0; margin:14px 0 12px; flex-wrap:wrap; row-gap:14px;}
+  .route-stop{background:var(--gray-100); border-radius:12px; padding:14px 20px; text-align:center; min-width:140px;}
+  .route-stop .city{font-weight:800; font-size:15px;}
+  .route-stop .nights{font-size:12px; color:var(--gray-600); margin-top:3px;}
+  .route-connector{display:flex; flex-direction:column; align-items:center; padding:0 14px; color:var(--gray-300); font-size:20px; font-weight:700;}
+  .nights-adjust{display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px;}
+  .nights-adjust button{
+    width:24px; height:24px; border:1.5px solid var(--gray-300); background:#fff; border-radius:50%;
+    color:var(--ink); font-size:13px; font-weight:800; cursor:pointer; padding:0; line-height:1;
+    display:flex; align-items:center; justify-content:center; font-family:inherit;
+  }
+  .nights-adjust button:disabled{opacity:.35; cursor:default;}
+  .route-nights-input{width:52px; border:1.5px solid var(--gray-300); border-radius:8px; padding:5px 6px; font-size:12.5px; font-family:inherit; text-align:center;}
+  .route-total{font-size:13px; font-weight:700; color:var(--gray-600); margin-bottom:8px;}
+
   @media (max-width:760px){
     .topbar{padding:14px 20px;}
     .stage{padding:28px 20px 80px;}
@@ -192,6 +211,12 @@
     <div class="summary-line" id="confirmationSummary"></div>
     <div class="date-rationale" id="dateRationale"></div>
     <button type="button" class="edit-again-btn" id="editAgainBtn">← Edit my answers</button>
+  </div>
+
+  <div class="route-section" id="routeSection" aria-label="Your route">
+    <div class="section-heading"><h2>Your route</h2><span class="live-badge">EDIT NIGHTS PER STOP</span></div>
+    <div class="route-stepper" id="routeStepper"></div>
+    <div class="route-total" id="routeTotal" aria-live="polite"></div>
   </div>
 
   <div class="dest-options" id="destOptionsSection" aria-label="Destination options">
@@ -1104,6 +1129,33 @@
     });
   }
 
+  // Fills in any blank ("auto") nights on an ordered stop list from the
+  // resolved trip length: user-specified nights are kept as-is and the
+  // remaining nights are split evenly across the blank stops with the same
+  // rule allocateNights uses (remainder to earlier stops, min 1 per stop).
+  function fillBlankNights(stops, totalNights){
+    var fixedSum = 0, blankCount = 0;
+    stops.forEach(function(s){
+      if (s.nights == null) blankCount++;
+      else fixedSum += s.nights;
+    });
+    if (!blankCount){
+      return stops.map(function(s){ return { name: s.name, nights: s.nights }; });
+    }
+    var remaining = Math.max(blankCount, totalNights - fixedSum);
+    var base = Math.floor(remaining / blankCount), rem = remaining % blankCount;
+    var bi = 0;
+    return stops.map(function(s){
+      if (s.nights != null) return { name: s.name, nights: s.nights };
+      var nights = Math.max(1, base + (bi < rem ? 1 : 0));
+      bi++;
+      return { name: s.name, nights: nights };
+    });
+  }
+
+  // Exposed for testing (pure/deterministic).
+  window.fillBlankNights = fillBlankNights;
+
   function generateDestinationOptions(data){
     var entries = ((data.destination && data.destination.regions) || [])
       .map(function(r){ return String(r).trim(); })
@@ -1236,9 +1288,14 @@
     data.destination.selectedOption = {
       name: opt.name, stops: opt.stops, rationale: opt.rationale, recommended: !!opt.recommended
     };
+    // The new option's per-stop allocation now drives the trip length.
+    recomputeResolvedEnd(data);
     persistData(data);
-    // Keep the confirmation card's route in sync with the chosen option.
+    // Keep the confirmation card's route + dates and the route stepper in
+    // sync with the chosen option.
     $('confirmationSummary').textContent = summarize(data);
+    renderDateLine(data);
+    renderRouteStepper(data);
   }
 
   function renderDestinationOptions(data){
@@ -1281,6 +1338,165 @@
       });
       grid.appendChild(card);
     });
+    section.classList.add('visible');
+  }
+
+  // ---------- Route/stop overview (results) ----------
+  // Horizontal stepper of the active route (departure endpoint → each stop
+  // with its night allocation → home endpoint). Nights are adjustable in
+  // place (min 1/stop); every change writes through to storage, recomputes
+  // dates.resolved.endDate from startDate + total nights, and refreshes the
+  // trip summary's dates line and total-nights readout live.
+  function activeStops(data){
+    if (data.destination.mode === 'known') return data.destination.stops;
+    return data.destination.selectedOption ? data.destination.selectedOption.stops : [];
+  }
+
+  function totalStopNights(stops){
+    return stops.reduce(function(sum, s){ return sum + (s.nights || 0); }, 0);
+  }
+
+  function pluralNights(n){ return n + (n === 1 ? ' night' : ' nights'); }
+
+  function parseISODateLocal(iso){
+    var p = String(iso).split('-');
+    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  }
+
+  // Per-stop nights are the source of truth for total trip length once the
+  // plan exists: whenever they change, the resolved end date is recomputed
+  // as startDate + total nights, and a general-window reason line is
+  // rewritten to show the updated range.
+  function recomputeResolvedEnd(data){
+    var r = data.dates && data.dates.resolved;
+    if (!r || !r.startDate) return;
+    var total = totalStopNights(activeStops(data));
+    if (total < 1) return;
+    var s = parseISODateLocal(r.startDate);
+    var e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + total);
+    var newEnd = toISODate(e);
+    if (newEnd === r.endDate) return;
+    r.endDate = newEnd;
+    if (r.reason){
+      var sep = r.reason.indexOf(' — ');
+      var basis = sep !== -1 ? r.reason.slice(sep + 3) : '';
+      r.reason = 'Recommended: ' + formatRange(s, e) + (basis ? ' — ' + basis : '');
+    }
+  }
+
+  function renderDateLine(data){
+    var rationale = $('dateRationale');
+    var r = data.dates.resolved;
+    if (data.dates.mode === 'general' && r && r.reason){
+      rationale.textContent = '📅 ' + r.reason;
+    } else if (r && r.startDate && r.endDate){
+      rationale.textContent = '📅 ' + formatISODate(r.startDate) + ' – ' + formatISODate(r.endDate);
+    } else {
+      rationale.textContent = '';
+    }
+  }
+
+  function updateRouteTotals(data){
+    var total = totalStopNights(activeStops(data));
+    var r = data.dates.resolved;
+    var text = pluralNights(total) + ' total';
+    if (r && r.startDate && r.endDate){
+      text += ' · ' + formatRange(parseISODateLocal(r.startDate), parseISODateLocal(r.endDate));
+    }
+    $('routeTotal').textContent = text;
+  }
+
+  function commitNights(data, index, value, rerenderStepper){
+    var stops = activeStops(data);
+    var stop = stops[index];
+    if (!stop) return;
+    var v = parseInt(value, 10);
+    if (isNaN(v)) return;
+    if (v < 1) v = 1; // min 1 night per stop
+    stop.nights = v;
+    recomputeResolvedEnd(data);
+    persistData(data);
+    // Live recalcs: summary, dates line, option cards' nights, totals.
+    $('confirmationSummary').textContent = summarize(data);
+    renderDateLine(data);
+    if (data.destination.mode === 'flexible') renderDestinationOptions(data);
+    if (rerenderStepper) renderRouteStepper(data);
+    else updateRouteTotals(data);
+  }
+
+  function renderRouteStepper(data){
+    var section = $('routeSection');
+    var stepper = $('routeStepper');
+    stepper.innerHTML = '';
+    var stops = activeStops(data);
+    if (!stops.length){
+      section.classList.remove('visible');
+      return;
+    }
+
+    function connector(){
+      var c = document.createElement('div');
+      c.className = 'route-connector';
+      c.textContent = '→';
+      return c;
+    }
+    function endpoint(label){
+      var el = document.createElement('div');
+      el.className = 'route-stop route-endpoint';
+      var city = document.createElement('div');
+      city.className = 'city';
+      city.textContent = '✈ ' + label;
+      el.appendChild(city);
+      return el;
+    }
+
+    var from = data.departingFrom;
+    if (from){
+      stepper.appendChild(endpoint('Departure — ' + from));
+      stepper.appendChild(connector());
+    }
+
+    stops.forEach(function(stop, i){
+      if (i > 0) stepper.appendChild(connector());
+      var el = document.createElement('div');
+      el.className = 'route-stop';
+      el.setAttribute('data-stop-index', String(i));
+      el.innerHTML =
+        '<div class="city">' + escapeHtml(stop.name) + '</div>' +
+        '<div class="nights">' + pluralNights(stop.nights) + '</div>' +
+        '<div class="nights-adjust">' +
+          '<button type="button" class="nights-minus" aria-label="Decrease nights in ' + escapeHtml(stop.name) + '"' + (stop.nights <= 1 ? ' disabled' : '') + '>−</button>' +
+          '<input class="route-nights-input" type="number" min="1" step="1" value="' + stop.nights + '" aria-label="Nights in ' + escapeHtml(stop.name) + '">' +
+          '<button type="button" class="nights-plus" aria-label="Increase nights in ' + escapeHtml(stop.name) + '">+</button>' +
+        '</div>';
+      el.querySelector('.nights-minus').addEventListener('click', function(){
+        commitNights(data, i, stop.nights - 1, true);
+      });
+      el.querySelector('.nights-plus').addEventListener('click', function(){
+        commitNights(data, i, stop.nights + 1, true);
+      });
+      var input = el.querySelector('.route-nights-input');
+      input.addEventListener('input', function(e){
+        var v = parseInt(e.target.value, 10);
+        if (isNaN(v) || v < 1) return; // incomplete/invalid — normalized on change
+        commitNights(data, i, v, false); // no re-render, so typing keeps focus
+        el.querySelector('.nights').textContent = pluralNights(stop.nights);
+        el.querySelector('.nights-minus').disabled = stop.nights <= 1;
+      });
+      input.addEventListener('change', function(e){
+        var v = parseInt(e.target.value, 10);
+        if (isNaN(v) || v < 1) v = 1;
+        commitNights(data, i, v, true); // full re-render normalizes the input
+      });
+      stepper.appendChild(el);
+    });
+
+    if (from){
+      stepper.appendChild(connector());
+      stepper.appendChild(endpoint('Home — ' + from));
+    }
+
+    updateRouteTotals(data);
     section.classList.add('visible');
   }
 
@@ -1338,6 +1554,15 @@
         ? { name: rec.name, stops: rec.stops, rationale: rec.rationale, recommended: !!rec.recommended }
         : null;
     }
+    // Known-mode stops with blank nights get an even auto-allocation from
+    // the resolved trip length (PRD: "auto-allocated evenly across the trip
+    // length and shown back to the user as editable").
+    if (data.destination.mode === 'known' && data.destination.stops.length){
+      data.destination.stops = fillBlankNights(data.destination.stops, nightsFromResolved(data));
+    }
+    // If the per-stop allocation sums differently than the resolved range
+    // (e.g. user-specified nights), the end date follows the nights.
+    recomputeResolvedEnd(data);
     return data;
   }
 
@@ -1372,14 +1597,19 @@
     var data = collectFormData();
     persistData(data);
 
-    $('confirmationSummary').textContent = summarize(data);
-    var rationale = $('dateRationale');
-    if (data.dates.mode === 'general' && data.dates.resolved){
-      rationale.textContent = '📅 ' + data.dates.resolved.reason;
-    } else {
-      rationale.textContent = '📅 ' + formatISODate(data.dates.startDate) + ' – ' + formatISODate(data.dates.endDate);
+    // Show the auto-allocated nights back in the intake rows so re-editing
+    // the form reflects them.
+    if (data.destination.mode === 'known'){
+      data.destination.stops.forEach(function(s, i){
+        if (state.stops[i]) state.stops[i].nights = s.nights;
+      });
+      renderStops();
     }
+
+    $('confirmationSummary').textContent = summarize(data);
+    renderDateLine(data);
     renderDestinationOptions(data);
+    renderRouteStepper(data);
     $('intakeForm').style.display = 'none';
     $('confirmationCard').classList.add('visible');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1387,6 +1617,7 @@
 
   $('editAgainBtn').addEventListener('click', function(){
     $('confirmationCard').classList.remove('visible');
+    $('routeSection').classList.remove('visible');
     $('destOptionsSection').classList.remove('visible');
     $('intakeForm').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });

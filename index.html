@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultimate Trip Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --coral:#FF385C; --coral-dark:#E31C5F; --coral-soft:#FFE8EC;
+    --ink:#222222; --gray-900:#222; --gray-600:#717171; --gray-300:#DDDDDD; --gray-100:#F7F7F7;
+    --good:#00A86B; --warn:#C13515; --shadow:0 6px 16px rgba(0,0,0,.12);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:"Nunito Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color:var(--ink); margin:0; background:#fff; -webkit-font-smoothing:antialiased;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 48px; border-bottom:1px solid var(--gray-300); position:sticky; top:0; background:#fff; z-index:20;
+  }
+  .brand{display:flex; align-items:center; gap:8px; font-weight:900; font-size:20px; color:var(--coral);}
+  .brand-mark{width:30px; height:30px; border-radius:8px; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px;}
+
+  .stage{display:none; max-width:1160px; margin:0 auto; padding:40px 48px 100px;}
+  .stage.active{display:block;}
+
+  h1.page-title{font-size:32px; font-weight:900; margin:0 0 6px;}
+  p.page-sub{color:var(--gray-600); font-size:15px; margin:0 0 36px;}
+
+  .section-card{background:#fff; border:1px solid var(--gray-300); border-radius:var(--radius); padding:28px; margin-bottom:24px;}
+  .section-title{font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--coral); margin-bottom:18px;}
+
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:4px;}
+  .field-row.triple{grid-template-columns:1fr 1fr 1fr;}
+  .field{margin-bottom:18px;}
+  .field label{display:block; font-size:13px; font-weight:700; margin-bottom:8px;}
+  .input{
+    width:100%; border:1.5px solid var(--gray-300); border-radius:10px; padding:13px 14px;
+    font-size:14px; font-family:inherit; color:var(--ink); background:#fff;
+  }
+  .input::placeholder{color:#b0b0b0;}
+  .input:disabled{background:var(--gray-100); color:var(--gray-600); cursor:not-allowed;}
+  textarea.input{resize:vertical; min-height:70px;}
+  .pill-group{display:flex; gap:8px; flex-wrap:wrap;}
+  .pill{
+    border:1.5px solid var(--gray-300); border-radius:999px; padding:9px 16px; font-size:13px;
+    font-weight:700; color:var(--gray-600); cursor:pointer; background:#fff; user-select:none;
+  }
+  .pill.selected{border-color:var(--ink); color:var(--ink); background:var(--gray-100);}
+  .chip{
+    border:1.5px solid var(--gray-300); border-radius:999px; padding:7px 14px; font-size:12px;
+    font-weight:700; color:var(--gray-600); cursor:pointer; user-select:none; background:#fff;
+  }
+  .chip.selected{background:var(--coral-soft); border-color:var(--coral); color:var(--coral-dark);}
+  .chip .chip-x{margin-left:6px; font-weight:800;}
+  .helper{font-size:12px; color:var(--gray-600); margin-top:8px;}
+  .checkbox-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 24px;}
+  .checkbox-item{display:flex; align-items:flex-start; gap:10px; font-size:13.5px; font-weight:600; cursor:pointer; line-height:1.4;}
+  .checkbox-item input{width:18px; height:18px; margin-top:1px; accent-color:var(--coral); flex-shrink:0; cursor:pointer;}
+
+  /* Trip style slider */
+  .style-slider{margin-top:10px;}
+  .style-range{
+    -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px;
+    background:linear-gradient(to right, var(--coral) 0%, var(--coral) 100%, var(--gray-300) 100%);
+    outline:none; margin:8px 0 0; cursor:pointer;
+  }
+  .style-range::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%;
+    background:#fff; border:3px solid var(--coral); box-shadow:var(--shadow); cursor:grab;
+  }
+  .style-range::-moz-range-thumb{
+    width:14px; height:14px; border-radius:50%; background:#fff; border:3px solid var(--coral);
+    box-shadow:var(--shadow); cursor:grab;
+  }
+  .slider-labels{display:flex; justify-content:space-between; font-size:11px; color:var(--gray-600); margin-top:10px; font-weight:600;}
+  .slider-labels span{cursor:pointer;}
+  .slider-labels span.active{color:var(--coral-dark); font-weight:800;}
+
+  .cta-row{position:sticky; bottom:0; background:linear-gradient(to top, #fff 70%, transparent); padding-top:24px; margin-top:8px;}
+  .submit-btn{
+    background:var(--coral); color:#fff; border:none; border-radius:12px; padding:16px 32px;
+    font-size:16px; font-weight:800; cursor:pointer; width:100%; box-shadow:0 4px 12px rgba(255,56,92,.35);
+    font-family:inherit;
+  }
+
+  /* Multi-stop destination entry */
+  .stop-list{display:flex; flex-direction:column; gap:8px; margin-bottom:10px;}
+  .stop-row{display:flex; align-items:center; gap:10px; border:1.5px solid var(--gray-300); border-radius:10px; padding:9px 12px; background:#fff;}
+  .stop-row .stop-num{width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .stop-row .stop-name{flex:1; font-weight:700; font-size:13.5px;}
+  .stop-row .nights-input{width:76px; border:1.5px solid var(--gray-300); border-radius:8px; padding:6px 8px; font-size:12.5px; font-family:inherit; text-align:center;}
+  .stop-row .move-btn{
+    border:1.5px solid var(--gray-300); background:#fff; color:var(--gray-600); border-radius:6px;
+    width:24px; height:24px; font-size:12px; font-weight:800; cursor:pointer; padding:0; line-height:1;
+    display:flex; align-items:center; justify-content:center; font-family:inherit;
+  }
+  .stop-row .move-btn:disabled{opacity:.35; cursor:default;}
+  .stop-row .remove-x{color:var(--gray-600); cursor:pointer; font-weight:800; font-size:14px; padding:0 4px; background:none; border:none; font-family:inherit;}
+  .stop-arrow{text-align:center; color:var(--gray-300); font-size:13px; margin:-2px 0;}
+  .limit-msg{color:var(--warn); font-weight:700;}
+
+  /* Validation */
+  .error-banner{
+    display:none; background:#FFF0EC; border:1.5px solid var(--warn); color:var(--warn);
+    border-radius:12px; padding:16px 20px; font-size:13.5px; font-weight:600; margin-bottom:28px;
+  }
+  .error-banner.visible{display:block;}
+  .error-banner ul{margin:8px 0 0; padding-left:20px;}
+  .error-banner li{margin-bottom:3px;}
+  .invalid, .input.invalid, .nights-input.invalid{border-color:var(--warn) !important;}
+  .invalid-group{border:1.5px solid var(--warn); border-radius:12px; padding:10px; background:#FFF8F6;}
+  .field-error-msg{font-size:12px; color:var(--warn); font-weight:700; margin-top:6px;}
+
+  /* Confirmation state */
+  .confirmation-card{
+    display:none; border:1.5px solid var(--good); background:#F0FBF6; border-radius:var(--radius);
+    padding:36px; text-align:center;
+  }
+  .confirmation-card.visible{display:block;}
+  .confirmation-card .check-mark{
+    width:52px; height:52px; border-radius:50%; background:var(--good); color:#fff; font-size:26px;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 16px;
+  }
+  .confirmation-card h2{font-size:22px; font-weight:900; margin:0 0 8px;}
+  .confirmation-card p{font-size:14px; color:var(--gray-600); margin:0 0 6px;}
+  .confirmation-card .summary-line{font-size:13.5px; color:var(--ink); font-weight:700; margin-top:14px;}
+  .edit-again-btn{
+    margin-top:20px; background:#fff; color:var(--ink); border:1.5px solid var(--ink); border-radius:12px;
+    padding:12px 24px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit;
+  }
+
+  @media (max-width:760px){
+    .topbar{padding:14px 20px;}
+    .stage{padding:28px 20px 80px;}
+    .field-row, .field-row.triple, .checkbox-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><div class="brand-mark">✈</div>Ultimate Trip</div>
+</div>
+
+<!-- ============ INPUT STAGE ============ -->
+<div class="stage active" id="stage-input">
+  <h1 class="page-title">Let's plan your ultimate trip</h1>
+  <p class="page-sub">Answer a few questions and we'll build a complete, bookable itinerary — flights, lodging, day-by-day plan, and budget.</p>
+
+  <div class="error-banner" id="errorBanner" role="alert" aria-live="assertive"></div>
+
+  <div class="confirmation-card" id="confirmationCard">
+    <div class="check-mark">✓</div>
+    <h2>Your trip details are in!</h2>
+    <p>We've saved your preferences. Next up: we'll research flights, lodging, and a day-by-day plan and build your full trip.</p>
+    <div class="summary-line" id="confirmationSummary"></div>
+    <button type="button" class="edit-again-btn" id="editAgainBtn">← Edit my answers</button>
+  </div>
+
+  <form id="intakeForm" novalidate>
+
+    <div class="section-card" id="datesSection">
+      <div class="section-title">Dates</div>
+      <div class="pill-group" style="margin-bottom:16px;" id="dateModePills">
+        <div class="pill" data-date-mode="specific">Specific dates</div><div class="pill selected" data-date-mode="general">General window</div>
+      </div>
+      <div class="field-row" id="specificDatesFields" style="display:none;">
+        <div class="field"><label for="startDate">Start date</label><input class="input" type="date" id="startDate"></div>
+        <div class="field"><label for="endDate">End date</label><input class="input" type="date" id="endDate"></div>
+      </div>
+      <div id="generalWindowFields">
+        <div class="field">
+          <label>Which month(s) work? <span style="font-weight:400; color:var(--gray-600);">(select any that apply)</span></label>
+          <div class="pill-group" id="monthChips">
+            <div class="chip" data-month="Jan">Jan</div><div class="chip" data-month="Feb">Feb</div><div class="chip" data-month="Mar">Mar</div><div class="chip" data-month="Apr">Apr</div>
+            <div class="chip" data-month="May">May</div><div class="chip" data-month="Jun">Jun</div><div class="chip" data-month="Jul">Jul</div><div class="chip" data-month="Aug">Aug</div>
+            <div class="chip" data-month="Sep">Sep</div><div class="chip" data-month="Oct">Oct</div><div class="chip" data-month="Nov">Nov</div><div class="chip" data-month="Dec">Dec</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Year</label>
+            <div class="pill-group" id="yearPills"><div class="pill selected" data-year="2026">2026</div><div class="pill" data-year="2027">2027</div></div>
+          </div>
+          <div class="field"><label for="tripLength">Trip length</label><input class="input" id="tripLength" placeholder="e.g. 7–10 days"></div>
+        </div>
+        <div class="helper">We'll recommend the best exact dates within your selected months — based on typical weather, local events/holidays, and price/crowd patterns for your destination.</div>
+      </div>
+    </div>
+
+    <div class="section-card" id="destSection">
+      <div class="section-title">Departure &amp; destination</div>
+      <div class="field-row">
+        <div class="field"><label for="departingFrom">Departing from</label><input class="input" id="departingFrom" placeholder="City or airport"></div>
+        <div class="field">
+          <label>Destination</label>
+          <div class="pill-group" style="margin-bottom:10px;" id="destModePills"><div class="pill selected" data-dest-mode="known">I know where</div><div class="pill" data-dest-mode="flexible">I'm flexible</div></div>
+          <div id="fixedDestField" style="display:block;">
+            <div class="stop-list" id="stopList"></div>
+            <input class="input" id="addStopInput" placeholder="Add another city or country and press Enter">
+            <div class="helper" id="stopHelper">Add one stop for a single destination, or multiple stops in visit order for a multi-city trip (e.g., Austin → Dallas, or London → Paris → Amsterdam). Use ↑ / ↓ to reorder; leave nights blank to split evenly. <b>Max 6 stops.</b></div>
+            <div class="helper limit-msg" id="stopLimitMsg" style="display:none;">Stop limit reached (6/6) — remove a stop to add a different one.</div>
+          </div>
+          <div id="flexibleDestField" style="display:none;">
+            <div class="pill-group" style="margin-bottom:10px;" id="regionChipList"></div>
+            <input class="input" id="addRegionInput" placeholder="Add another region, country, or city and press Enter">
+            <div class="helper">Add as many locations of interest as you'd like — we'll narrow down the best fit, including proposing a multi-stop combination if it fits (e.g., "Europe" → a London + Paris option).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" id="budgetSection">
+      <div class="section-title">Budget</div>
+      <div class="field-row triple">
+        <div class="field"><label for="budgetAmount">Total budget</label><input class="input" id="budgetAmount" inputmode="decimal" placeholder="$"></div>
+        <div class="field"><label>Per person or group?</label><div class="pill-group" id="budgetScopePills"><div class="pill selected" data-budget-scope="per-person">Per person</div><div class="pill" data-budget-scope="group">Group total</div></div></div>
+        <div class="field"><label>Includes flights &amp; lodging?</label><div class="pill-group" id="budgetIncludesPills"><div class="pill selected" data-budget-includes="included">Included</div><div class="pill" data-budget-includes="separate">Separate</div></div></div>
+      </div>
+    </div>
+
+    <div class="section-card" id="travelersSection">
+      <div class="section-title">Trip goal &amp; travelers</div>
+      <div class="field-row">
+        <div class="field"><label for="tripPurpose">Purpose of the trip</label><input class="input" id="tripPurpose" placeholder="e.g. anniversary, family reunion"></div>
+        <div class="field"><label for="whoIsGoing">Who's going</label><input class="input" id="whoIsGoing" placeholder="# adults, # kids + ages"></div>
+      </div>
+      <div class="field"><label for="constraints">Mobility / dietary constraints <span style="font-weight:400; color:var(--gray-600);">(optional)</span></label><input class="input" id="constraints" placeholder="Optional"></div>
+    </div>
+
+    <div class="section-card" id="styleSection">
+      <div class="section-title">Trip style</div>
+      <div class="style-slider">
+        <input type="range" class="style-range" id="styleRange" min="0" max="3" step="1" value="3" aria-label="Trip style">
+        <div class="slider-labels" id="styleLabels">
+          <span data-style-index="0">Relaxation</span><span data-style-index="1">Adventure</span><span data-style-index="2">Cultural exploration</span><span data-style-index="3" class="active">Balanced mix</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" id="mustSeeSection">
+      <div class="section-title">Must-see / must-do</div>
+      <textarea class="input" id="mustSee" placeholder="Any specific places, restaurants, or experiences you already have in mind? (optional)"></textarea>
+    </div>
+
+    <div class="section-card" id="otherReqsSection">
+      <div class="section-title">Other requirements <span style="font-weight:400; text-transform:none; color:var(--gray-600);">(optional — select any that apply)</span></div>
+      <div class="checkbox-grid" id="otherReqs">
+        <label class="checkbox-item"><input type="checkbox" value="Accessible for people with limited mobility"><span>Accessible for people with limited mobility</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Pet-friendly"><span>Pet-friendly</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Kid-friendly"><span>Kid-friendly</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="No rental car"><span>No rental car</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Walkable cities preferred"><span>Walkable cities preferred</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Travel during key special events/holidays for that destination"><span>Travel during key special events/holidays for that destination</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Looking for popular bucket list destinations and activities"><span>Looking for popular bucket list destinations and activities</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="English predominantly spoken"><span>English predominantly spoken</span></label>
+        <label class="checkbox-item"><input type="checkbox" value="Female solo travel friendly"><span>Female solo travel friendly</span></label>
+      </div>
+    </div>
+
+    <div class="cta-row"><button type="submit" class="submit-btn" id="submitBtn">Build My Trip →</button></div>
+  </form>
+</div>
+
+<!-- ============ RESULTS STAGE (placeholder — built in a later story) ============ -->
+<div class="stage" id="stage-results"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var MAX_STOPS = 6;
+  var STYLE_VALUES = ['Relaxation', 'Adventure', 'Cultural exploration', 'Balanced mix'];
+  var STORAGE_KEY = 'tripPlannerIntake';
+
+  // ---------- App state ----------
+  var state = {
+    dateMode: 'general',           // 'general' | 'specific'
+    destMode: 'known',             // 'known' | 'flexible'
+    stops: [],                     // [{ name, nights (number|null) }]
+    regions: []                    // ['Portugal', ...]
+  };
+
+  function $(id){ return document.getElementById(id); }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  // ---------- Dates: specific vs. general window ----------
+  var dateModePills = $('dateModePills').querySelectorAll('.pill');
+  dateModePills.forEach(function(pill){
+    pill.addEventListener('click', function(){
+      dateModePills.forEach(function(p){ p.classList.remove('selected'); });
+      pill.classList.add('selected');
+      state.dateMode = pill.getAttribute('data-date-mode');
+      $('specificDatesFields').style.display = state.dateMode === 'specific' ? 'grid' : 'none';
+      $('generalWindowFields').style.display = state.dateMode === 'general' ? 'block' : 'none';
+      clearInvalid($('datesSection'));
+    });
+  });
+
+  // Month chips (multi-select)
+  $('monthChips').querySelectorAll('.chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chip.classList.toggle('selected');
+      clearInvalid($('datesSection'));
+    });
+  });
+
+  // Year pills (single-select)
+  var yearPills = $('yearPills').querySelectorAll('.pill');
+  yearPills.forEach(function(pill){
+    pill.addEventListener('click', function(){
+      yearPills.forEach(function(p){ p.classList.remove('selected'); });
+      pill.classList.add('selected');
+      clearInvalid($('datesSection'));
+    });
+  });
+
+  // ---------- Destination: known vs. flexible ----------
+  var destModePills = $('destModePills').querySelectorAll('.pill');
+  destModePills.forEach(function(pill){
+    pill.addEventListener('click', function(){
+      destModePills.forEach(function(p){ p.classList.remove('selected'); });
+      pill.classList.add('selected');
+      state.destMode = pill.getAttribute('data-dest-mode');
+      $('fixedDestField').style.display = state.destMode === 'known' ? 'block' : 'none';
+      $('flexibleDestField').style.display = state.destMode === 'flexible' ? 'block' : 'none';
+      clearInvalid($('destSection'));
+    });
+  });
+
+  // ---------- Ordered stop list ("I know where") ----------
+  function renderStops(){
+    var list = $('stopList');
+    list.innerHTML = '';
+    state.stops.forEach(function(stop, i){
+      if (i > 0){
+        var arrow = document.createElement('div');
+        arrow.className = 'stop-arrow';
+        arrow.textContent = '↓';
+        list.appendChild(arrow);
+      }
+      var row = document.createElement('div');
+      row.className = 'stop-row';
+      row.innerHTML =
+        '<span class="stop-num">' + (i + 1) + '</span>' +
+        '<span class="stop-name">' + escapeHtml(stop.name) + '</span>' +
+        '<input class="nights-input" type="number" min="1" step="1" placeholder="nights" aria-label="Nights in ' + escapeHtml(stop.name) + '"' +
+          (stop.nights != null ? ' value="' + stop.nights + '"' : '') + '>' +
+        '<button type="button" class="move-btn move-up" aria-label="Move ' + escapeHtml(stop.name) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+        '<button type="button" class="move-btn move-down" aria-label="Move ' + escapeHtml(stop.name) + ' down"' + (i === state.stops.length - 1 ? ' disabled' : '') + '>↓</button>' +
+        '<button type="button" class="remove-x" aria-label="Remove ' + escapeHtml(stop.name) + '">×</button>';
+
+      row.querySelector('.nights-input').addEventListener('input', function(e){
+        var v = parseInt(e.target.value, 10);
+        stop.nights = (isNaN(v) || v < 1) ? null : v;
+      });
+      row.querySelector('.move-up').addEventListener('click', function(){
+        if (i === 0) return;
+        var tmp = state.stops[i - 1]; state.stops[i - 1] = state.stops[i]; state.stops[i] = tmp;
+        renderStops();
+      });
+      row.querySelector('.move-down').addEventListener('click', function(){
+        if (i === state.stops.length - 1) return;
+        var tmp = state.stops[i + 1]; state.stops[i + 1] = state.stops[i]; state.stops[i] = tmp;
+        renderStops();
+      });
+      row.querySelector('.remove-x').addEventListener('click', function(){
+        state.stops.splice(i, 1);
+        renderStops();
+      });
+      list.appendChild(row);
+    });
+
+    var atLimit = state.stops.length >= MAX_STOPS;
+    $('addStopInput').disabled = atLimit;
+    $('stopLimitMsg').style.display = atLimit ? 'block' : 'none';
+  }
+
+  $('addStopInput').addEventListener('keydown', function(e){
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var name = e.target.value.trim();
+    if (!name || state.stops.length >= MAX_STOPS) return;
+    state.stops.push({ name: name, nights: null });
+    e.target.value = '';
+    renderStops();
+    clearInvalid($('destSection'));
+  });
+
+  // ---------- Region chip list ("I'm flexible") ----------
+  function renderRegions(){
+    var list = $('regionChipList');
+    list.innerHTML = '';
+    state.regions.forEach(function(region, i){
+      var chip = document.createElement('div');
+      chip.className = 'chip selected';
+      chip.innerHTML = escapeHtml(region) + '<span class="chip-x" role="button" aria-label="Remove ' + escapeHtml(region) + '">×</span>';
+      chip.querySelector('.chip-x').addEventListener('click', function(){
+        state.regions.splice(i, 1);
+        renderRegions();
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  $('addRegionInput').addEventListener('keydown', function(e){
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var name = e.target.value.trim();
+    if (!name) return;
+    state.regions.push(name);
+    e.target.value = '';
+    renderRegions();
+    clearInvalid($('destSection'));
+  });
+
+  // ---------- Budget toggles ----------
+  ['budgetScopePills', 'budgetIncludesPills'].forEach(function(groupId){
+    var pills = $(groupId).querySelectorAll('.pill');
+    pills.forEach(function(pill){
+      pill.addEventListener('click', function(){
+        pills.forEach(function(p){ p.classList.remove('selected'); });
+        pill.classList.add('selected');
+      });
+    });
+  });
+
+  // ---------- Trip style slider ----------
+  var styleRange = $('styleRange');
+  var styleLabels = $('styleLabels').querySelectorAll('span');
+  function updateStyleUI(){
+    var v = parseInt(styleRange.value, 10);
+    var pct = (v / 3) * 100;
+    styleRange.style.background =
+      'linear-gradient(to right, var(--coral) 0%, var(--coral) ' + pct + '%, var(--gray-300) ' + pct + '%)';
+    styleLabels.forEach(function(label, i){
+      label.classList.toggle('active', i === v);
+    });
+  }
+  styleRange.addEventListener('input', updateStyleUI);
+  styleLabels.forEach(function(label){
+    label.addEventListener('click', function(){
+      styleRange.value = label.getAttribute('data-style-index');
+      updateStyleUI();
+    });
+  });
+  updateStyleUI();
+
+  // ---------- Validation ----------
+  function markInvalid(el){
+    if (el) el.classList.add(el.classList.contains('input') || el.classList.contains('nights-input') ? 'invalid' : 'invalid-group');
+  }
+  function clearInvalid(scope){
+    (scope || document).querySelectorAll('.invalid, .invalid-group').forEach(function(el){
+      el.classList.remove('invalid');
+      el.classList.remove('invalid-group');
+    });
+  }
+
+  // Clear inline highlight as the user fixes a field
+  ['departingFrom', 'budgetAmount', 'tripPurpose', 'whoIsGoing', 'startDate', 'endDate'].forEach(function(id){
+    $(id).addEventListener('input', function(){ $(id).classList.remove('invalid'); });
+  });
+
+  function validate(){
+    var errors = []; // { label, el }
+
+    // Dates
+    if (state.dateMode === 'general'){
+      var monthsSelected = $('monthChips').querySelectorAll('.chip.selected').length;
+      var yearSelected = $('yearPills').querySelectorAll('.pill.selected').length;
+      if (monthsSelected === 0) errors.push({ label: 'Dates — select at least one month for your travel window', el: $('monthChips') });
+      if (yearSelected === 0) errors.push({ label: 'Dates — select a year for your travel window', el: $('yearPills') });
+    } else {
+      var start = $('startDate').value;
+      var end = $('endDate').value;
+      if (!start) errors.push({ label: 'Dates — start date', el: $('startDate') });
+      if (!end) errors.push({ label: 'Dates — end date', el: $('endDate') });
+      if (start && end && end < start) errors.push({ label: 'Dates — end date must be on or after the start date', el: $('endDate') });
+    }
+
+    // Departing from
+    if (!$('departingFrom').value.trim()) errors.push({ label: 'Departing from', el: $('departingFrom') });
+
+    // Destination
+    if (state.destMode === 'known'){
+      if (state.stops.length === 0) errors.push({ label: 'Destination — add at least one stop', el: $('addStopInput') });
+    } else {
+      if (state.regions.length === 0) errors.push({ label: 'Destination — add at least one region or country you’re considering', el: $('addRegionInput') });
+    }
+
+    // Budget
+    var rawBudget = $('budgetAmount').value.replace(/[$,\s]/g, '');
+    var budgetNum = parseFloat(rawBudget);
+    if (rawBudget === '' ) errors.push({ label: 'Total budget', el: $('budgetAmount') });
+    else if (isNaN(budgetNum) || budgetNum <= 0) errors.push({ label: 'Total budget — must be a positive number', el: $('budgetAmount') });
+
+    // Trip goal & travelers
+    if (!$('tripPurpose').value.trim()) errors.push({ label: 'Purpose of the trip', el: $('tripPurpose') });
+    if (!$('whoIsGoing').value.trim()) errors.push({ label: "Who's going", el: $('whoIsGoing') });
+
+    return errors;
+  }
+
+  function showErrorBanner(errors){
+    var banner = $('errorBanner');
+    banner.innerHTML =
+      '<span>Hold on — some required fields are missing or need attention before we can build your trip:</span>' +
+      '<ul>' + errors.map(function(e){ return '<li>' + escapeHtml(e.label) + '</li>'; }).join('') + '</ul>';
+    banner.classList.add('visible');
+    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function hideErrorBanner(){
+    var banner = $('errorBanner');
+    banner.classList.remove('visible');
+    banner.innerHTML = '';
+  }
+
+  // ---------- Collect + submit ----------
+  function collectFormData(){
+    var months = [];
+    $('monthChips').querySelectorAll('.chip.selected').forEach(function(c){ months.push(c.getAttribute('data-month')); });
+    var yearEl = $('yearPills').querySelector('.pill.selected');
+    var scopeEl = $('budgetScopePills').querySelector('.pill.selected');
+    var includesEl = $('budgetIncludesPills').querySelector('.pill.selected');
+    var otherReqs = [];
+    $('otherReqs').querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb){ otherReqs.push(cb.value); });
+
+    return {
+      dates: {
+        mode: state.dateMode,
+        months: state.dateMode === 'general' ? months : [],
+        year: state.dateMode === 'general' && yearEl ? parseInt(yearEl.getAttribute('data-year'), 10) : null,
+        tripLength: state.dateMode === 'general' ? $('tripLength').value.trim() : '',
+        startDate: state.dateMode === 'specific' ? $('startDate').value : null,
+        endDate: state.dateMode === 'specific' ? $('endDate').value : null
+      },
+      departingFrom: $('departingFrom').value.trim(),
+      destination: {
+        mode: state.destMode,
+        stops: state.destMode === 'known' ? state.stops.map(function(s){ return { name: s.name, nights: s.nights }; }) : [],
+        regions: state.destMode === 'flexible' ? state.regions.slice() : []
+      },
+      budget: {
+        amount: parseFloat($('budgetAmount').value.replace(/[$,\s]/g, '')),
+        scope: scopeEl ? scopeEl.getAttribute('data-budget-scope') : 'per-person',
+        flightsLodging: includesEl ? includesEl.getAttribute('data-budget-includes') : 'included'
+      },
+      travelers: {
+        purpose: $('tripPurpose').value.trim(),
+        whoIsGoing: $('whoIsGoing').value.trim(),
+        constraints: $('constraints').value.trim()
+      },
+      tripStyle: STYLE_VALUES[parseInt($('styleRange').value, 10)] || 'Balanced mix',
+      mustSee: $('mustSee').value.trim(),
+      otherRequirements: otherReqs,
+      submittedAt: new Date().toISOString()
+    };
+  }
+
+  function summarize(data){
+    var dest = data.destination.mode === 'known'
+      ? data.destination.stops.map(function(s){ return s.name; }).join(' → ')
+      : 'Flexible: ' + data.destination.regions.join(', ');
+    var when = data.dates.mode === 'general'
+      ? data.dates.months.join('/') + ' ' + data.dates.year
+      : data.dates.startDate + ' – ' + data.dates.endDate;
+    return dest + ' · ' + when + ' · ' + data.tripStyle;
+  }
+
+  $('intakeForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    clearInvalid();
+    var errors = validate();
+    if (errors.length > 0){
+      errors.forEach(function(err){ markInvalid(err.el); });
+      showErrorBanner(errors);
+      return;
+    }
+    hideErrorBanner();
+
+    var data = collectFormData();
+    window.tripPlannerData = data;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (err) { /* storage unavailable (e.g. private mode) — in-memory copy still set */ }
+
+    $('confirmationSummary').textContent = summarize(data);
+    $('intakeForm').style.display = 'none';
+    $('confirmationCard').classList.add('visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  $('editAgainBtn').addEventListener('click', function(){
+    $('confirmationCard').classList.remove('visible');
+    $('intakeForm').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  renderStops();
+  renderRegions();
+})();
+</script>
+</body>
+</html>

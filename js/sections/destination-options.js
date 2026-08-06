@@ -11,6 +11,10 @@
 var ENGLISH_REQ = 'English predominantly spoken';
 var BUCKET_REQ = 'Looking for popular bucket list destinations and activities';
 var WALKABLE_REQS = ['No rental car', 'Walkable cities preferred'];
+var ACCESS_REQ = 'Accessible for people with limited mobility';
+var PET_REQ = 'Pet-friendly';
+var KID_REQ = 'Kid-friendly';
+var SOLO_REQ = 'Female solo travel friendly';
 
 function profileByName(name){
   for (var i = 0; i < REGION_PROFILES.length; i++){
@@ -54,8 +58,11 @@ function bestClimate(profileName, months){
   return best;
 }
 
+// Returns { score, reasons, gaps }. `gaps` names the checked-requirement
+// dimensions this proposal is honestly a poor fit for ('english', 'walkable',
+// 'access', 'kid', 'pet', 'solo') — conflict detection reads them later.
 function scoreProposal(p, profileName, ctx){
-  var score = 0, reasons = [];
+  var score = 0, reasons = [], gaps = [];
   if (p.styles && p.styles.indexOf(ctx.tripStyle) !== -1){
     score += 2; reasons.push('fits your ' + ctx.tripStyle.toLowerCase() + ' trip style');
   }
@@ -65,14 +72,34 @@ function scoreProposal(p, profileName, ctx){
   if (ctx.wantsEnglish && p.english != null){
     if (p.english === 2){ score += 2; reasons.push('English predominantly spoken'); }
     else if (p.english === 1){ score += 1; }
-    else { score -= 1; }
+    else { score -= 1; gaps.push('english'); }
   }
   if (ctx.wantsWalkable && p.walkable != null){
     if (p.walkable){ score += 2; reasons.push('fully doable without a rental car'); }
-    else { score -= 1; }
+    else { score -= 1; gaps.push('walkable'); }
   }
   if (ctx.wantsBucket && p.bucket){ score += 1; reasons.push('a classic bucket-list pick'); }
-  return { score: score, reasons: reasons };
+  if (ctx.wantsAccess && p.access != null){
+    if (p.access === 2){ score += 2; reasons.push('flat, step-free-friendly getting around'); }
+    else if (p.access === 1){ score += 1; }
+    else { score -= 1; gaps.push('access'); }
+  }
+  if (ctx.wantsKid && p.kid != null){
+    if (p.kid === 2){ score += 2; reasons.push('easy with kids'); }
+    else if (p.kid === 1){ score += 1; }
+    else { score -= 1; gaps.push('kid'); }
+  }
+  if (ctx.wantsPet && p.pet != null){
+    if (p.pet === 2){ score += 2; reasons.push('genuinely pet-friendly'); }
+    else if (p.pet === 1){ score += 1; }
+    else { score -= 1; gaps.push('pet'); }
+  }
+  if (ctx.wantsSolo && p.solo != null){
+    if (p.solo === 2){ score += 2; reasons.push('a strong fit for solo female travel'); }
+    else if (p.solo === 1){ score += 1; }
+    else { score -= 1; gaps.push('solo'); }
+  }
+  return { score: score, reasons: reasons, gaps: gaps };
 }
 
 // One-line rationale: the base blurb plus only the requirement claims that
@@ -82,6 +109,10 @@ function buildRationale(p, ctx){
   if (ctx.wantsEnglish && p.english === 2) extras.push('English is the main language');
   else if (ctx.wantsEnglish && p.english === 1) extras.push('English is widely spoken in visitor areas');
   if (ctx.wantsWalkable && p.walkable) extras.push('no rental car needed');
+  if (ctx.wantsAccess && p.access === 2) extras.push('flat and modern with step-free options for limited mobility');
+  if (ctx.wantsKid && p.kid === 2) extras.push('an easy destination with kids');
+  if (ctx.wantsPet && p.pet === 2) extras.push('road-trip-friendly with plenty of pet-friendly lodging');
+  if (ctx.wantsSolo && p.solo === 2) extras.push('well-suited to solo female travelers (compact, well-trafficked areas and reliable public transit)');
   return extras.length ? p.why + ' — ' + extras.join(', ') : p.why;
 }
 
@@ -89,6 +120,9 @@ function buildTradeoff(p, ctx){
   var extras = [];
   if (ctx.wantsEnglish && p.english === 0) extras.push('English is not widely spoken');
   if (ctx.wantsWalkable && p.walkable === false) extras.push('easiest with a rental car');
+  if (ctx.wantsAccess && p.access === 0) extras.push('stairs, hills, or uneven streets make it tough with limited mobility');
+  if (ctx.wantsKid && p.kid === 0) extras.push('not a natural fit for young kids');
+  if (ctx.wantsPet && p.pet === 0) extras.push('bringing a pet is impractical (long flights and pet-entry rules)');
   return extras.length ? p.tradeoff + '; ' + extras.join('; ') : p.tradeoff;
 }
 
@@ -112,7 +146,11 @@ function generateDestinationOptions(data){
     months: candidateMonths(data),
     wantsEnglish: reqs.indexOf(ENGLISH_REQ) !== -1,
     wantsWalkable: reqs.some(function(r){ return WALKABLE_REQS.indexOf(r) !== -1; }),
-    wantsBucket: reqs.indexOf(BUCKET_REQ) !== -1
+    wantsBucket: reqs.indexOf(BUCKET_REQ) !== -1,
+    wantsAccess: reqs.indexOf(ACCESS_REQ) !== -1,
+    wantsPet: reqs.indexOf(PET_REQ) !== -1,
+    wantsKid: reqs.indexOf(KID_REQ) !== -1,
+    wantsSolo: reqs.indexOf(SOLO_REQ) !== -1
   };
   var totalNights = nightsFromResolved(data);
 
@@ -128,7 +166,7 @@ function generateDestinationOptions(data){
           entryIndex: entryIndex, order: pool.length, supplement: false,
           cities: p.cities.slice(), name: p.cities.join(' + '),
           rationale: buildRationale(p, ctx), tradeoff: buildTradeoff(p, ctx),
-          score: s.score, reasons: s.reasons
+          score: s.score, reasons: s.reasons, gaps: s.gaps
         });
       });
     } else {
@@ -141,7 +179,8 @@ function generateDestinationOptions(data){
         cities: [entry], name: entry,
         rationale: 'Straight from your list — we\'ll plan ' + entry + ' exactly as you entered it',
         tradeoff: 'We have limited destination data for this entry, so expect broader estimates',
-        score: climate.score, reasons: reasons
+        // No fit data for unknown entries — never fabricate a requirement gap.
+        score: climate.score, reasons: reasons, gaps: []
       });
     }
   });
@@ -188,7 +227,7 @@ function generateDestinationOptions(data){
             cities: p.cities.slice(), name: name,
             rationale: 'Popular alternative to compare against your list — ' + p.why,
             tradeoff: buildTradeoff(p, ctx),
-            score: s.score, reasons: s.reasons
+            score: s.score, reasons: s.reasons, gaps: s.gaps
           };
         }
       });
@@ -210,6 +249,7 @@ function generateDestinationOptions(data){
       stops: allocateNights(cities, totalNights),
       rationale: c.rationale,
       tradeoff: c.tradeoff,
+      requirementGaps: (c.gaps || []).slice(),
       recommended: recommended,
       recommendedReason: recommended
         ? 'Best overall fit — ' + (c.reasons.length ? c.reasons.slice(0, 3).join('; ') : 'the closest match to what you told us')
@@ -221,22 +261,100 @@ function generateDestinationOptions(data){
 // Exposed for testing (pure/deterministic given the intake data).
 window.generateDestinationOptions = generateDestinationOptions;
 
+// ---------- Conflict detection (PRD: warn and continue — never block) ----------
+// A checked requirement is "in conflict" when the results had to compromise on
+// it: in flexible mode, when the recommended option is honestly a poor fit for
+// it, or every generated option is; in any mode, when "No rental car" forced
+// out a drive that would otherwise have been the recommended way to make a
+// leg. Unknown entries/city pairs carry no fit data and never fabricate a
+// conflict. Returns an array of human-readable warning strings (empty = none).
+var CONFLICT_GAP_LABELS = {
+  english: 'English-speaking',
+  access: 'limited-mobility-accessible',
+  pet: 'pet-friendly',
+  kid: 'kid-friendly',
+  solo: 'solo-female-friendly'
+};
+
+function walkableConflictLabel(reqs){
+  var noCar = reqs.indexOf(WALKABLE_REQS[0]) !== -1;      // 'No rental car'
+  var walkable = reqs.indexOf(WALKABLE_REQS[1]) !== -1;   // 'Walkable cities preferred'
+  if (noCar && walkable) return 'walkable, no-rental-car';
+  return noCar ? 'no-rental-car' : 'walkable';
+}
+
+function detectConflictWarnings(data){
+  var warnings = [];
+  var reqs = data.otherRequirements || [];
+
+  // Flexible-mode destination options: compare each checked requirement
+  // against the options' recorded poor-fit gaps.
+  var options = (data.destination && data.destination.mode === 'flexible' &&
+    data.destination.options) || [];
+  if (options.length){
+    var rec = null;
+    options.forEach(function(o){ if (!rec && o.recommended) rec = o; });
+    if (!rec) rec = options[0];
+    var activeKeys = [];
+    if (reqs.indexOf(ENGLISH_REQ) !== -1) activeKeys.push('english');
+    if (reqs.some(function(r){ return WALKABLE_REQS.indexOf(r) !== -1; })) activeKeys.push('walkable');
+    if (reqs.indexOf(ACCESS_REQ) !== -1) activeKeys.push('access');
+    if (reqs.indexOf(PET_REQ) !== -1) activeKeys.push('pet');
+    if (reqs.indexOf(KID_REQ) !== -1) activeKeys.push('kid');
+    if (reqs.indexOf(SOLO_REQ) !== -1) activeKeys.push('solo');
+    activeKeys.forEach(function(key){
+      function hasGap(o){ return (o.requirementGaps || []).indexOf(key) !== -1; }
+      if (hasGap(rec) || options.every(hasGap)){
+        var label = key === 'walkable' ? walkableConflictLabel(reqs) : CONFLICT_GAP_LABELS[key];
+        warnings.push('Limited ' + label + ' options fit your other criteria — showing the closest available matches.');
+      }
+    });
+  }
+
+  // Legs (known or flexible mode) where "No rental car" excluded the drive
+  // that would otherwise have been recommended.
+  var squeezedLegs = [];
+  (data.legs || []).forEach(function(leg){
+    (leg.options || []).forEach(function(o){
+      if (o.noRentalCompromise) squeezedLegs.push(leg.from + ' → ' + leg.to);
+    });
+  });
+  if (squeezedLegs.length){
+    warnings.push('"No rental car" is a squeeze on the ' + squeezedLegs.join(' and ') +
+      ' leg' + (squeezedLegs.length > 1 ? 's' : '') +
+      ' — driving would otherwise be the most practical option; showing the best non-drive alternatives.');
+  }
+  return warnings;
+}
+
+// Exposed for testing (pure given the intake data).
+window.detectConflictWarnings = detectConflictWarnings;
+
 function selectDestinationOption(data, opt){
   data.destination.selectedOption = {
     name: opt.name, stops: opt.stops, rationale: opt.rationale, recommended: !!opt.recommended
   };
   // The new option's per-stop allocation now drives the trip length.
   recomputeResolvedEnd(data);
-  // Switching options can change the route's cities, so the inter-city
-  // legs are rebuilt (keeping selections for legs that still exist).
+  // Switching options can change the route's cities, so the arrival flight,
+  // inter-city legs, and per-stop lodging are rebuilt (keeping selections
+  // where the same from→to pairing or city survives) and the conflict
+  // warnings re-evaluated against the new legs.
+  data.arrivalFlight = buildArrivalFlight(data, data.arrivalFlight);
   data.legs = buildLegs(data, data.legs);
+  data.lodging = buildLodging(data, data.lodging);
+  data.conflictWarnings = detectConflictWarnings(data);
   persistData(data);
-  // Keep the confirmation card's route + dates, the route stepper, and the
-  // inter-city legs in sync with the chosen option.
+  // Keep the confirmation card's route + dates, the route stepper, the
+  // arrival flight, the inter-city legs, the per-stop lodging, and the
+  // conflict banner in sync with the chosen option.
   $('confirmationSummary').textContent = summarize(data);
   renderDateLine(data);
   renderRouteStepper(data);
+  renderArrivalFlight(data);
   renderLegs(data);
+  renderLodging(data);
+  renderConflictWarnings(data);
 }
 
 function renderDestinationOptions(data){

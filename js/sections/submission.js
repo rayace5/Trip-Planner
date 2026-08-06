@@ -72,6 +72,26 @@ function hideErrorBanner(){
   banner.innerHTML = '';
 }
 
+// Non-blocking conflict banner (mockup .warning-banner): shown near the trip
+// summary only when data.conflictWarnings is non-empty. One banner covers all
+// conflicts — a single warning renders inline, multiple render as a list.
+function renderConflictWarnings(data){
+  var banner = $('conflictBanner');
+  var warnings = data.conflictWarnings || [];
+  if (!warnings.length){
+    banner.classList.remove('visible');
+    banner.innerHTML = '';
+    return;
+  }
+  var body = warnings.length === 1
+    ? '<div>' + escapeHtml(warnings[0]) + '</div>'
+    : '<div>Heads up — a few of your requirements are in tension with these results:<ul>' +
+        warnings.map(function(w){ return '<li>' + escapeHtml(w) + '</li>'; }).join('') +
+      '</ul></div>';
+  banner.innerHTML = '<span class="icon">⚠</span>' + body;
+  banner.classList.add('visible');
+}
+
 function renderDateLine(data){
   var rationale = $('dateRationale');
   var r = data.dates.resolved;
@@ -128,7 +148,10 @@ $('intakeForm').addEventListener('submit', function(e){
   renderDateLine(data);
   renderDestinationOptions(data);
   renderRouteStepper(data);
+  renderArrivalFlight(data);
   renderLegs(data);
+  renderLodging(data);
+  renderConflictWarnings(data);
   $('intakeForm').style.display = 'none';
   $('confirmationCard').classList.add('visible');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -136,8 +159,11 @@ $('intakeForm').addEventListener('submit', function(e){
 
 $('editAgainBtn').addEventListener('click', function(){
   $('confirmationCard').classList.remove('visible');
+  $('conflictBanner').classList.remove('visible');
   $('routeSection').classList.remove('visible');
+  $('arrivalSection').classList.remove('visible');
   $('legsSection').classList.remove('visible');
+  $('lodgingSection').classList.remove('visible');
   $('destOptionsSection').classList.remove('visible');
   $('intakeForm').style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });

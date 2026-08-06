@@ -37,14 +37,24 @@
     <button type="button" class="edit-again-btn" id="editAgainBtn">← Edit my answers</button>
   </div>
 
+  <div class="warning-banner" id="conflictBanner" role="status" aria-live="polite"></div>
+
   <div class="route-section" id="routeSection" aria-label="Your route">
     <div class="section-heading"><h2>Your route</h2><span class="live-badge">EDIT NIGHTS PER STOP</span></div>
     <div class="route-stepper" id="routeStepper"></div>
     <div class="route-total" id="routeTotal" aria-live="polite"></div>
   </div>
 
+  <div class="legs-section" id="arrivalSection" aria-label="Arrival flight options">
+    <div id="arrivalContainer"></div>
+  </div>
+
   <div class="legs-section" id="legsSection" aria-label="Inter-city transport options">
     <div id="legsContainer"></div>
+  </div>
+
+  <div class="legs-section" id="lodgingSection" aria-label="Lodging options">
+    <div id="lodgingContainer"></div>
   </div>
 
   <div class="dest-options" id="destOptionsSection" aria-label="Destination options">
@@ -174,6 +184,8 @@
 <script src="js/sections/submission.js"></script>
 <script src="js/sections/route-stepper.js"></script>
 <script src="js/sections/destination-options.js"></script>
+<script src="js/sections/arrival-flights.js"></script>
 <script src="js/sections/leg-transport.js"></script>
+<script src="js/sections/lodging.js"></script>
 </body>
 </html>

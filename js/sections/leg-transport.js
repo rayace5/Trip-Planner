@@ -108,6 +108,7 @@ function generateLegOptions(fromStop, toStop, data){
 
   var pick = pickRecommendedLegOption(options);
   var reason = pick.reason;
+  var noRentalCompromise = false;
   if (driveExcluded){
     // Disclose the constraint whenever the drive would have won the
     // pre-exclusion recommendation (length comparisons don't work here:
@@ -115,6 +116,7 @@ function generateLegOptions(fromStop, toStop, data){
     var unfiltered = pickRecommendedLegOption(all);
     if (all[unfiltered.index].mode === 'drive'){
       reason += ' — drive excluded per your "No rental car" preference';
+      noRentalCompromise = true;
     }
   }
   if (options[pick.index].estimated){
@@ -122,6 +124,9 @@ function generateLegOptions(fromStop, toStop, data){
   }
   options[pick.index].recommended = true;
   options[pick.index].recommendedReason = reason;
+  // Flag the compromise for the results-page conflict banner (see
+  // detectConflictWarnings in js/sections/destination-options.js).
+  if (noRentalCompromise) options[pick.index].noRentalCompromise = true;
   return options;
 }
 

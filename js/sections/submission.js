@@ -148,6 +148,7 @@ $('intakeForm').addEventListener('submit', function(e){
   renderDateLine(data);
   renderDestinationOptions(data);
   renderRouteStepper(data);
+  renderArrivalFlight(data);
   renderLegs(data);
   renderConflictWarnings(data);
   $('intakeForm').style.display = 'none';
@@ -159,6 +160,7 @@ $('editAgainBtn').addEventListener('click', function(){
   $('confirmationCard').classList.remove('visible');
   $('conflictBanner').classList.remove('visible');
   $('routeSection').classList.remove('visible');
+  $('arrivalSection').classList.remove('visible');
   $('legsSection').classList.remove('visible');
   $('destOptionsSection').classList.remove('visible');
   $('intakeForm').style.display = 'block';

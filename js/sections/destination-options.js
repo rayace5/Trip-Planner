@@ -336,17 +336,21 @@ function selectDestinationOption(data, opt){
   };
   // The new option's per-stop allocation now drives the trip length.
   recomputeResolvedEnd(data);
-  // Switching options can change the route's cities, so the inter-city
-  // legs are rebuilt (keeping selections for legs that still exist) and the
-  // conflict warnings re-evaluated against the new legs.
+  // Switching options can change the route's cities, so the arrival flight
+  // and inter-city legs are rebuilt (keeping selections where the same
+  // from→to pairing survives) and the conflict warnings re-evaluated
+  // against the new legs.
+  data.arrivalFlight = buildArrivalFlight(data, data.arrivalFlight);
   data.legs = buildLegs(data, data.legs);
   data.conflictWarnings = detectConflictWarnings(data);
   persistData(data);
   // Keep the confirmation card's route + dates, the route stepper, the
-  // inter-city legs, and the conflict banner in sync with the chosen option.
+  // arrival flight, the inter-city legs, and the conflict banner in sync
+  // with the chosen option.
   $('confirmationSummary').textContent = summarize(data);
   renderDateLine(data);
   renderRouteStepper(data);
+  renderArrivalFlight(data);
   renderLegs(data);
   renderConflictWarnings(data);
 }

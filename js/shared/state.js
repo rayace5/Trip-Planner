@@ -83,6 +83,10 @@ function collectFormData(){
   // If the per-stop allocation sums differently than the resolved range
   // (e.g. user-specified nights), the end date follows the nights.
   recomputeResolvedEnd(data);
+  // Arrival flight (LEG 1: origin → first stop) with the recommended
+  // option pre-selected — present for single-stop trips too.
+  // Resubmission regenerates from scratch.
+  data.arrivalFlight = buildArrivalFlight(data, null);
   // Inter-city transport legs between consecutive stops (empty for
   // single-stop trips), each with the recommended option pre-selected.
   // Resubmission regenerates from scratch.

@@ -215,7 +215,8 @@ function renderLegs(data){
         grid.querySelectorAll('.option-card').forEach(function(c){ c.classList.remove('selected'); });
         card.classList.add('selected');
         leg.selected = opt.label;
-        persistData(data);
+        // The travel day's transit entry follows the selected leg option.
+        refreshItinerary(data);
       });
       grid.appendChild(card);
     });

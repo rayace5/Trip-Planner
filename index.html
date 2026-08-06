@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="css/sections/destination-options.css">
 <link rel="stylesheet" href="css/sections/route-stepper.css">
 <link rel="stylesheet" href="css/sections/leg-transport.css">
+<link rel="stylesheet" href="css/sections/itinerary.css">
 </head>
 <body>
 
@@ -55,6 +56,12 @@
 
   <div class="legs-section" id="lodgingSection" aria-label="Lodging options">
     <div id="lodgingContainer"></div>
+  </div>
+
+  <div class="itin-section" id="itinerarySection" aria-label="Day-by-day itinerary">
+    <div class="section-heading"><h2>Day-by-day itinerary</h2><span class="live-badge">UPDATES WITH SELECTIONS</span></div>
+    <div class="day-pills" id="itinDayPills"></div>
+    <div id="itinDayPanel"></div>
   </div>
 
   <div class="dest-options" id="destOptionsSection" aria-label="Destination options">
@@ -187,5 +194,6 @@
 <script src="js/sections/arrival-flights.js"></script>
 <script src="js/sections/leg-transport.js"></script>
 <script src="js/sections/lodging.js"></script>
+<script src="js/sections/itinerary.js"></script>
 </body>
 </html>

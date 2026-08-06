@@ -91,6 +91,10 @@ function collectFormData(){
   // single-stop trips), each with the recommended option pre-selected.
   // Resubmission regenerates from scratch.
   data.legs = buildLegs(data, null);
+  // Per-stop lodging options (one set per stop, single-stop trips
+  // included), each with the recommended option pre-selected.
+  // Resubmission regenerates from scratch.
+  data.lodging = buildLodging(data, null);
   // Non-blocking requirement-conflict warnings (PRD: warn and continue).
   // Always an array; empty when nothing had to be compromised.
   data.conflictWarnings = detectConflictWarnings(data);

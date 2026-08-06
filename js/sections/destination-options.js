@@ -346,6 +346,8 @@ function selectDestinationOption(data, opt){
   // The itinerary follows the new route/selections (the viewed day index is
   // preserved by the renderer where still valid).
   data.itinerary = generateItinerary(data);
+  // New route, legs, and lodging → recompute the budget rollup.
+  data.budgetRollup = buildBudgetRollup(data);
   data.conflictWarnings = detectConflictWarnings(data);
   persistData(data);
   // Keep the confirmation card's route + dates, the route stepper, the
@@ -359,6 +361,7 @@ function selectDestinationOption(data, opt){
   renderLegs(data);
   renderLodging(data);
   renderItinerary(data);
+  renderBudgetRollup(data);
   renderConflictWarnings(data);
 }
 

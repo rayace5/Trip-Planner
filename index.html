@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="css/sections/route-stepper.css">
 <link rel="stylesheet" href="css/sections/leg-transport.css">
 <link rel="stylesheet" href="css/sections/itinerary.css">
+<link rel="stylesheet" href="css/sections/budget-rollup.css">
 </head>
 <body>
 
@@ -35,6 +36,7 @@
     <p>We've saved your preferences. Next up: we'll research flights, lodging, and a day-by-day plan and build your full trip.</p>
     <div class="summary-line" id="confirmationSummary"></div>
     <div class="date-rationale" id="dateRationale"></div>
+    <div class="budget-badge" id="budgetBadge"></div>
     <button type="button" class="edit-again-btn" id="editAgainBtn">← Edit my answers</button>
   </div>
 
@@ -62,6 +64,12 @@
     <div class="section-heading"><h2>Day-by-day itinerary</h2><span class="live-badge">UPDATES WITH SELECTIONS</span></div>
     <div class="day-pills" id="itinDayPills"></div>
     <div id="itinDayPanel"></div>
+  </div>
+
+  <div class="budget-rollup-section" id="budgetRollupSection" aria-label="Budget">
+    <div class="section-heading"><h2>Budget</h2><span class="live-badge">UPDATES WITH SELECTIONS</span></div>
+    <div class="budget-box" id="budgetBox"></div>
+    <div class="freshness-note" id="budgetFreshnessNote" aria-live="polite"></div>
   </div>
 
   <div class="dest-options" id="destOptionsSection" aria-label="Destination options">
@@ -195,5 +203,6 @@
 <script src="js/sections/leg-transport.js"></script>
 <script src="js/sections/lodging.js"></script>
 <script src="js/sections/itinerary.js"></script>
+<script src="js/sections/budget-rollup.js"></script>
 </body>
 </html>

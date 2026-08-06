@@ -462,6 +462,10 @@ function renderItinerary(data, resetView){
 // inter-city leg, nights). Lodging changes deliberately don't call this.
 function refreshItinerary(data){
   data.itinerary = generateItinerary(data);
+  // The budget follows the same selections the itinerary does (arrival
+  // flight, inter-city legs) plus the day count, so recompute it together.
+  data.budgetRollup = buildBudgetRollup(data);
   persistData(data);
   renderItinerary(data);
+  renderBudgetRollup(data);
 }

@@ -106,7 +106,7 @@ function itinNewMeta(){
 // at 9:00am / 1:00pm / 7:30pm with activities strictly between them.
 function itinFullDay(dayNumber, stop, stopIndex, src, style){
   var entries = [], meta = itinNewMeta();
-  entries.push(itinEntry('9:00am', 'Breakfast near your lodging'));
+  entries.push(itinEntry('9:00am', 'Breakfast near your lodging', null, { meal:'breakfast' }));
   if (style === 'Relaxation'){
     itinPushActivity(entries, meta, src, dayNumber, '10:30am', 0);
     itinPushLunch(entries, meta, dayNumber);
@@ -222,7 +222,7 @@ function itinTravelDay(dayNumber, fromStop, toStop, stopIndex, data){
 // Final day: last morning at the last stop, then the evening flight home.
 function itinFinalDay(dayNumber, stop, stopIndex, src){
   var entries = [], meta = itinNewMeta();
-  entries.push(itinEntry('9:00am', 'Breakfast near your lodging'));
+  entries.push(itinEntry('9:00am', 'Breakfast near your lodging', null, { meal:'breakfast' }));
   itinPushActivity(entries, meta, src, dayNumber, '10:00am', 0);
   entries.push(itinEntry('12:00pm', 'Check out and store your bags'));
   itinPushLunch(entries, meta, dayNumber, 'Lunch at a local spot', 'one last meal in ' + stop.name);

@@ -150,6 +150,7 @@ $('intakeForm').addEventListener('submit', function(e){
   renderRouteStepper(data);
   renderArrivalFlight(data);
   renderLegs(data);
+  renderLodging(data);
   renderConflictWarnings(data);
   $('intakeForm').style.display = 'none';
   $('confirmationCard').classList.add('visible');
@@ -162,6 +163,7 @@ $('editAgainBtn').addEventListener('click', function(){
   $('routeSection').classList.remove('visible');
   $('arrivalSection').classList.remove('visible');
   $('legsSection').classList.remove('visible');
+  $('lodgingSection').classList.remove('visible');
   $('destOptionsSection').classList.remove('visible');
   $('intakeForm').style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });

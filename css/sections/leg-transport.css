@@ -10,3 +10,11 @@
 .leg-block .section-heading{margin:0 0 16px;}
 .option-card .price{font-size:22px; font-weight:900; margin:6px 0 8px;}
 .option-card .price span{font-size:12px; font-weight:600; color:var(--gray-600);}
+/* Inline unreasonable/unverified-connection warning under a leg's cards
+   (amber warn-and-continue styling, matching .warning-banner) */
+.leg-connection-warning{
+  display:flex; gap:8px; align-items:flex-start; margin-top:12px;
+  background:#FFF7ED; border:1.5px solid #F3B979; color:#8A5A12;
+  border-radius:10px; padding:10px 14px; font-size:12.5px; font-weight:600;
+}
+.leg-connection-warning .icon{font-size:14px; flex-shrink:0;}

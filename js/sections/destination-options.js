@@ -267,7 +267,10 @@ window.generateDestinationOptions = generateDestinationOptions;
 // it, or every generated option is; in any mode, when "No rental car" forced
 // out a drive that would otherwise have been the recommended way to make a
 // leg. Unknown entries/city pairs carry no fit data and never fabricate a
-// conflict. Returns an array of human-readable warning strings (empty = none).
+// conflict. Legs flagged by classifyLegConnection (no reasonable — or no
+// verifiable — inter-city connection; see js/sections/leg-transport.js) add
+// one warning line each, coexisting with the requirement conflicts above.
+// Returns an array of human-readable warning strings (empty = none).
 var CONFLICT_GAP_LABELS = {
   english: 'English-speaking',
   access: 'limited-mobility-accessible',
@@ -324,6 +327,15 @@ function detectConflictWarnings(data){
       ' leg' + (squeezedLegs.length > 1 ? 's' : '') +
       ' — driving would otherwise be the most practical option; showing the best non-drive alternatives.');
   }
+
+  // Legs without a reasonable (or verifiable) inter-city connection (PRD
+  // edge case: surfaced as a trade-off, never silently routed around) —
+  // one line per affected leg, flagged at leg-build time.
+  (data.legs || []).forEach(function(leg){
+    if (leg.connectionWarning && leg.connectionWarning.reason){
+      warnings.push(leg.connectionWarning.reason);
+    }
+  });
   return warnings;
 }
 

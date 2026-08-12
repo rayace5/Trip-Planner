@@ -26,13 +26,17 @@ function commitNights(data, index, value, rerenderStepper){
   if (v < 1) v = 1; // min 1 night per stop
   stop.nights = v;
   recomputeResolvedEnd(data);
+  // Nights shifts change the day count, so the itinerary is regenerated
+  // (the viewed day index is preserved by the renderer where still valid).
+  data.itinerary = generateItinerary(data);
   persistData(data);
-  // Live recalcs: summary, dates line, option cards' nights, totals.
+  // Live recalcs: summary, dates line, option cards' nights, totals, itinerary.
   $('confirmationSummary').textContent = summarize(data);
   renderDateLine(data);
   if (data.destination.mode === 'flexible') renderDestinationOptions(data);
   if (rerenderStepper) renderRouteStepper(data);
   else updateRouteTotals(data);
+  renderItinerary(data);
 }
 
 function renderRouteStepper(data){

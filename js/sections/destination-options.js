@@ -343,17 +343,22 @@ function selectDestinationOption(data, opt){
   data.arrivalFlight = buildArrivalFlight(data, data.arrivalFlight);
   data.legs = buildLegs(data, data.legs);
   data.lodging = buildLodging(data, data.lodging);
+  // The itinerary follows the new route/selections (the viewed day index is
+  // preserved by the renderer where still valid).
+  data.itinerary = generateItinerary(data);
   data.conflictWarnings = detectConflictWarnings(data);
   persistData(data);
   // Keep the confirmation card's route + dates, the route stepper, the
-  // arrival flight, the inter-city legs, the per-stop lodging, and the
-  // conflict banner in sync with the chosen option.
+  // arrival flight, the inter-city legs, the per-stop lodging, the
+  // day-by-day itinerary, and the conflict banner in sync with the
+  // chosen option.
   $('confirmationSummary').textContent = summarize(data);
   renderDateLine(data);
   renderRouteStepper(data);
   renderArrivalFlight(data);
   renderLegs(data);
   renderLodging(data);
+  renderItinerary(data);
   renderConflictWarnings(data);
 }
 

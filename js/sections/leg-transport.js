@@ -1,4 +1,5 @@
-// Section: Inter-city transport legs — 2–3 options per consecutive stop pair with one recommended pick.
+// Section: Inter-city transport legs — 2–3 options per consecutive stop pair with one recommended pick,
+// plus unreasonable/unverified-connection flagging (classifyLegConnection).
 'use strict';
 
 // ---------- Inter-city transport legs ----------
@@ -133,6 +134,71 @@ function generateLegOptions(fromStop, toStop, data){
 // Exposed for testing (pure/deterministic given the intake data).
 window.generateLegOptions = generateLegOptions;
 
+// ---------- Unreasonable-connection detection ----------
+// PRD edge case: stops with no reasonable inter-city connection are surfaced
+// as a trade-off — never silently routed around. A leg is flagged when the
+// best it can offer is a very long haul (> LONG_LEG_HRS door-to-door) and
+// there is no verified (non-estimated) flight or train to shortcut it:
+//   verified-long   — real data shows the connection is genuinely long
+//                     (fastest verified option > 8h, e.g. a drive-only pair,
+//                     or a known pair whose fastest real option runs long);
+//   unverified-long — the pair isn't on file at all and every estimated
+//                     option runs long, so the app honestly cannot promise a
+//                     reasonable connection exists. The wording says the leg
+//                     is UNVERIFIED (the options are guesses) rather than
+//                     claiming the route is bad.
+// Known CITY_PAIRS are all reasonable by construction today, so this mainly
+// guards long drive-only combinations and long estimated fallbacks; the
+// verified-long paths also cover future data. Classification looks only at
+// the leg's option set, so switching the selected option never changes it.
+// Warn-and-continue: the options still render and stay selectable.
+var LONG_LEG_HRS = 8;
+
+var LEG_SLOW_MODE_NOUNS = { drive:'drive', ferry:'ferry crossing', train:'train ride', flight:'flight' };
+
+// Returns null (reasonable / nothing to flag) or { kind, reason }.
+function classifyLegConnection(options, fromName, toName){
+  if (!options || !options.length) return null;
+  var route = fromName + ' → ' + toName;
+  var fastest = options[0];
+  options.forEach(function(o){ if (o.hrs < fastest.hrs) fastest = o; });
+  var real = options.filter(function(o){ return !o.estimated; });
+  var hasRealFast = real.some(function(o){ return o.mode === 'flight' || o.mode === 'train'; });
+
+  if (hasRealFast){
+    // A direct flight/train is on file: only flag if even the fastest
+    // option is a genuinely long day (verified — the data is real).
+    if (fastest.hrs <= LONG_LEG_HRS) return null;
+    return { kind: 'verified-long', reason:
+      'Even the fastest option on file for ' + route + ' runs ≈' + Math.round(fastest.hrs) +
+      'h door-to-door — a long travel day. Consider an intermediate stop to break it up.' };
+  }
+  if (real.length){
+    // No direct flight/train on file, but real data exists (e.g. a
+    // drive-only pair): flag when the fastest VERIFIED option runs long —
+    // estimated top-ups are guesses and don't count as a shortcut.
+    var fastestReal = real[0];
+    real.forEach(function(o){ if (o.hrs < fastestReal.hrs) fastestReal = o; });
+    if (fastestReal.hrs <= LONG_LEG_HRS) return null;
+    var hasEstimates = options.some(function(o){ return o.estimated; });
+    return { kind: 'verified-long', reason:
+      'No direct flight or train on file for ' + route + ' — the only verified option is a ≈' +
+      Math.round(fastestReal.hrs) + 'h ' + (LEG_SLOW_MODE_NOUNS[fastestReal.mode] || 'trip') +
+      (hasEstimates ? ', and the other options shown are unverified estimates' : '') +
+      '. Consider checking real flight or train schedules, or adding an intermediate stop.' };
+  }
+  // Unknown pair — everything is estimated. We can't know real durations,
+  // so only flag when even the guesses run long, and say so honestly.
+  if (fastest.hrs <= LONG_LEG_HRS) return null;
+  return { kind: 'unverified-long', reason:
+    "We don't have route data for " + route + ' — no direct flight or train is on file, and every ' +
+    'estimated option runs ≈' + Math.round(fastest.hrs) + 'h or more, so the options above are ' +
+    'long-haul guesses. Check real schedules, or consider an intermediate stop.' };
+}
+
+// Exposed for testing (pure given an option set).
+window.classifyLegConnection = classifyLegConnection;
+
 // One leg per consecutive stop pair on the active route. Selection defaults
 // to the recommended option; when rebuilding (e.g. after switching a flexible
 // destination option), a previous selection is kept if the same from→to leg
@@ -156,7 +222,12 @@ function buildLegs(data, prevLegs){
         }
       }
     }
-    legs.push({ from: from, to: to, options: options, selected: selected });
+    // Unreasonable/unverified-connection flag (null when the leg is fine).
+    // Recomputed on every rebuild (submit, destination-option switch); it
+    // depends only on the option set, so in-leg selection changes never
+    // alter it.
+    legs.push({ from: from, to: to, options: options, selected: selected,
+      connectionWarning: classifyLegConnection(options, from, to) });
   }
   return legs;
 }
@@ -221,6 +292,18 @@ function renderLegs(data){
       grid.appendChild(card);
     });
     block.appendChild(grid);
+
+    // Inline connection warning under the leg's cards (warn-and-continue:
+    // the options above stay fully selectable).
+    if (leg.connectionWarning && leg.connectionWarning.reason){
+      var warn = document.createElement('div');
+      warn.className = 'leg-connection-warning';
+      warn.setAttribute('role', 'note');
+      warn.setAttribute('data-connection-warning-kind', leg.connectionWarning.kind);
+      warn.innerHTML = '<span class="icon">⚠</span><span>' +
+        escapeHtml(leg.connectionWarning.reason) + '</span>';
+      block.appendChild(warn);
+    }
     container.appendChild(block);
   });
   section.classList.add('visible');

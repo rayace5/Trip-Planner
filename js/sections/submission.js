@@ -152,6 +152,7 @@ $('intakeForm').addEventListener('submit', function(e){
   renderLegs(data);
   renderLodging(data);
   renderItinerary(data, true); // fresh submit starts back on Day 1
+  renderBudgetRollup(data);
   renderConflictWarnings(data);
   $('intakeForm').style.display = 'none';
   $('confirmationCard').classList.add('visible');
@@ -166,6 +167,7 @@ $('editAgainBtn').addEventListener('click', function(){
   $('legsSection').classList.remove('visible');
   $('lodgingSection').classList.remove('visible');
   $('itinerarySection').classList.remove('visible');
+  $('budgetRollupSection').classList.remove('visible');
   $('destOptionsSection').classList.remove('visible');
   $('intakeForm').style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });

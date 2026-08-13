@@ -29,6 +29,8 @@ function commitNights(data, index, value, rerenderStepper){
   // Nights shifts change the day count, so the itinerary is regenerated
   // (the viewed day index is preserved by the renderer where still valid).
   data.itinerary = generateItinerary(data);
+  // Nights × price/night and the per-day estimates feed the budget rollup.
+  data.budgetRollup = buildBudgetRollup(data);
   persistData(data);
   // Live recalcs: summary, dates line, option cards' nights, totals, itinerary.
   $('confirmationSummary').textContent = summarize(data);
@@ -37,6 +39,7 @@ function commitNights(data, index, value, rerenderStepper){
   if (rerenderStepper) renderRouteStepper(data);
   else updateRouteTotals(data);
   renderItinerary(data);
+  renderBudgetRollup(data);
 }
 
 function renderRouteStepper(data){

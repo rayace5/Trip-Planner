@@ -235,7 +235,9 @@ function renderLodging(data){
         grid.querySelectorAll('.option-card').forEach(function(c){ c.classList.remove('selected'); });
         card.classList.add('selected');
         entry.selected = opt.name;
-        persistData(data);
+        // Lodging price × nights feeds the budget rollup; the itinerary is
+        // deliberately unaffected by lodging picks.
+        refreshBudgetRollup(data);
       });
       grid.appendChild(card);
     });

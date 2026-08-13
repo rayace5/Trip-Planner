@@ -208,7 +208,8 @@ function renderArrivalFlight(data){
       grid.querySelectorAll('.option-card').forEach(function(c){ c.classList.remove('selected'); });
       card.classList.add('selected');
       af.selected = opt.label;
-      persistData(data);
+      // Day 1's pacing follows the selected arrival flight.
+      refreshItinerary(data);
     });
     grid.appendChild(card);
   });

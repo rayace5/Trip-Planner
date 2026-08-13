@@ -95,6 +95,14 @@ function collectFormData(){
   // included), each with the recommended option pre-selected.
   // Resubmission regenerates from scratch.
   data.lodging = buildLodging(data, null);
+  // Day-by-day itinerary built from the resolved dates, per-stop nights,
+  // and the selected arrival flight / inter-city legs.
+  // Resubmission regenerates from scratch.
+  data.itinerary = generateItinerary(data);
+  // Itemized budget rollup vs the stated budget (summary badge + budget
+  // box), with the research date (asOf). Recomputed on every selection
+  // change; resubmission regenerates from scratch.
+  data.budgetRollup = buildBudgetRollup(data);
   // Non-blocking requirement-conflict warnings (PRD: warn and continue).
   // Always an array; empty when nothing had to be compromised.
   data.conflictWarnings = detectConflictWarnings(data);

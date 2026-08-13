@@ -535,6 +535,341 @@ var CITY_LODGING = [
     { role:'value', name:'Frankton chain hotel', location:'Frankton, by the airport and Remarkables Park' } ] }
 ];
 
+// ---------- Itinerary activity data ----------
+// Known-city activity pools for the day-by-day itinerary: real, well-known
+// sights/areas only — never invented venues. kind buckets drive the trip-style
+// preference ordering ('culture' museums/historic, 'outdoor' parks/beaches/
+// hikes, 'stroll' neighborhoods/markets/food walks). Keyword order matters
+// for substring matching (e.g. 'venice' before 'nice').
+var CITY_ACTIVITIES = [
+  { keywords:['austin'], activities:[
+    { title:'Texas State Capitol tour', kind:'culture' },
+    { title:'Barton Springs Pool swim', kind:'outdoor' },
+    { title:'South Congress stroll and shops', kind:'stroll' },
+    { title:'Rainey Street live music', kind:'stroll' },
+    { title:'Lady Bird Lake trail or kayak loop', kind:'outdoor' },
+    { title:'Blanton Museum of Art', kind:'culture' } ] },
+  { keywords:['dallas'], activities:[
+    { title:'Dallas Museum of Art', kind:'culture' },
+    { title:'Sixth Floor Museum at Dealey Plaza', kind:'culture' },
+    { title:'Klyde Warren Park', kind:'outdoor' },
+    { title:'Deep Ellum murals and music venues', kind:'stroll' },
+    { title:'Dallas Arboretum and Botanical Garden', kind:'outdoor' },
+    { title:'Bishop Arts District stroll', kind:'stroll' } ] },
+  { keywords:['san antonio'], activities:[
+    { title:'The Alamo', kind:'culture' },
+    { title:'River Walk stroll', kind:'stroll' },
+    { title:'San Antonio Missions National Historical Park', kind:'culture' },
+    { title:'Pearl District market and shops', kind:'stroll' },
+    { title:'Japanese Tea Garden in Brackenridge Park', kind:'outdoor' } ] },
+  { keywords:['houston'], activities:[
+    { title:'Space Center Houston', kind:'culture' },
+    { title:'Houston Museum of Natural Science', kind:'culture' },
+    { title:'Buffalo Bayou Park', kind:'outdoor' },
+    { title:'Montrose galleries and cafés', kind:'stroll' },
+    { title:'Hermann Park and the zoo', kind:'outdoor' } ] },
+  { keywords:['las vegas','vegas'], activities:[
+    { title:'Strip landmarks walk and the Bellagio fountains', kind:'stroll' },
+    { title:'Neon Museum', kind:'culture' },
+    { title:'Red Rock Canyon scenic loop', kind:'outdoor' },
+    { title:'Fremont Street Experience', kind:'stroll' },
+    { title:'High Roller observation wheel', kind:'outdoor' } ] },
+  { keywords:['grand canyon'], activities:[
+    { title:'Rim Trail walk from Mather Point', kind:'outdoor' },
+    { title:'Bright Angel Trail hike (partway down)', kind:'outdoor' },
+    { title:'Desert View Drive viewpoints', kind:'outdoor' },
+    { title:'Yavapai Geology Museum', kind:'culture' },
+    { title:'Sunset at Hopi Point', kind:'outdoor' } ] },
+  { keywords:['new york','nyc','manhattan','brooklyn'], activities:[
+    { title:'Metropolitan Museum of Art', kind:'culture' },
+    { title:'Central Park walk', kind:'outdoor' },
+    { title:'Brooklyn Bridge walk and DUMBO', kind:'stroll' },
+    { title:'High Line and Chelsea Market', kind:'stroll' },
+    { title:'Staten Island Ferry harbor views', kind:'outdoor' },
+    { title:'Broadway show evening', kind:'culture' } ] },
+  { keywords:['chicago'], activities:[
+    { title:'Art Institute of Chicago', kind:'culture' },
+    { title:'Millennium Park and the Bean', kind:'stroll' },
+    { title:'Chicago Riverwalk architecture stroll', kind:'stroll' },
+    { title:'Lakefront Trail walk or bike', kind:'outdoor' },
+    { title:'Field Museum', kind:'culture' } ] },
+  { keywords:['los angeles','hollywood','santa monica'], activities:[
+    { title:'Griffith Observatory and park trails', kind:'outdoor' },
+    { title:'Getty Center', kind:'culture' },
+    { title:'Santa Monica Pier and beach', kind:'outdoor' },
+    { title:'Grand Central Market food hall', kind:'stroll' },
+    { title:'Hollywood Walk of Fame', kind:'stroll' } ] },
+  { keywords:['san francisco'], activities:[
+    { title:'Golden Gate Bridge viewpoint walk', kind:'outdoor' },
+    { title:'Fisherman\'s Wharf and the waterfront', kind:'stroll' },
+    { title:'Golden Gate Park and the de Young Museum', kind:'culture' },
+    { title:'Mission District murals and taquerías', kind:'stroll' },
+    { title:'Cable car ride and Lombard Street', kind:'culture' } ] },
+  { keywords:['miami'], activities:[
+    { title:'South Beach and the Art Deco district', kind:'stroll' },
+    { title:'Wynwood Walls street art', kind:'culture' },
+    { title:'Vizcaya Museum and Gardens', kind:'culture' },
+    { title:'Little Havana and Calle Ocho', kind:'stroll' },
+    { title:'Beach morning on the Atlantic sand', kind:'outdoor' } ] },
+  { keywords:['new orleans'], activities:[
+    { title:'French Quarter and Jackson Square', kind:'stroll' },
+    { title:'National WWII Museum', kind:'culture' },
+    { title:'Garden District via the St. Charles streetcar', kind:'stroll' },
+    { title:'City Park and café beignets', kind:'outdoor' },
+    { title:'Live jazz on Frenchmen Street', kind:'stroll' } ] },
+  { keywords:['lisbon'], activities:[
+    { title:'Alfama lanes and São Jorge Castle', kind:'culture' },
+    { title:'Belém Tower and Jerónimos Monastery', kind:'culture' },
+    { title:'Chiado and Baixa stroll', kind:'stroll' },
+    { title:'Time Out Market food hall', kind:'stroll' },
+    { title:'Miradouro viewpoint circuit', kind:'outdoor' },
+    { title:'LX Factory shops and murals', kind:'stroll' } ] },
+  { keywords:['porto'], activities:[
+    { title:'Ribeira waterfront and Dom Luís I Bridge', kind:'stroll' },
+    { title:'Livraria Lello and Clérigos Tower', kind:'culture' },
+    { title:'Port wine lodge tour in Vila Nova de Gaia', kind:'culture' },
+    { title:'Foz do Douro seafront walk', kind:'outdoor' } ] },
+  { keywords:['algarve','lagos'], activities:[
+    { title:'Ponta da Piedade cliffs and grottoes', kind:'outdoor' },
+    { title:'Praia Dona Ana beach', kind:'outdoor' },
+    { title:'Old Town Lagos stroll', kind:'stroll' },
+    { title:'Boat trip along the coastal caves', kind:'outdoor' },
+    { title:'Sunset at Cape St. Vincent (Sagres)', kind:'outdoor' } ] },
+  { keywords:['athens'], activities:[
+    { title:'Acropolis and the Parthenon', kind:'culture' },
+    { title:'Acropolis Museum', kind:'culture' },
+    { title:'Plaka and Anafiotika lanes', kind:'stroll' },
+    { title:'Ancient Agora', kind:'culture' },
+    { title:'Monastiraki flea market', kind:'stroll' },
+    { title:'Lycabettus Hill sunset climb', kind:'outdoor' } ] },
+  { keywords:['santorini','oia','fira'], activities:[
+    { title:'Fira-to-Oia caldera rim walk', kind:'outdoor' },
+    { title:'Oia sunset viewpoint', kind:'stroll' },
+    { title:'Akrotiri archaeological site', kind:'culture' },
+    { title:'Red Beach', kind:'outdoor' },
+    { title:'Caldera catamaran cruise', kind:'outdoor' } ] },
+  { keywords:['crete','chania'], activities:[
+    { title:'Venetian Harbour and lighthouse walk', kind:'stroll' },
+    { title:'Chania Old Town and the municipal market', kind:'stroll' },
+    { title:'Seitan Limania or Balos beach trip', kind:'outdoor' },
+    { title:'Samaria Gorge hike', kind:'outdoor' },
+    { title:'Archaeological Museum of Chania', kind:'culture' } ] },
+  { keywords:['barcelona'], activities:[
+    { title:'Sagrada Família', kind:'culture' },
+    { title:'Gothic Quarter and the cathedral', kind:'culture' },
+    { title:'Park Güell', kind:'outdoor' },
+    { title:'La Boqueria market and Las Ramblas', kind:'stroll' },
+    { title:'Barceloneta beach walk', kind:'outdoor' },
+    { title:'El Born and the Picasso Museum', kind:'culture' } ] },
+  { keywords:['madrid'], activities:[
+    { title:'Prado Museum', kind:'culture' },
+    { title:'Retiro Park rowboats and gardens', kind:'outdoor' },
+    { title:'Royal Palace of Madrid', kind:'culture' },
+    { title:'Mercado de San Miguel and Plaza Mayor', kind:'stroll' },
+    { title:'Reina Sofía Museum', kind:'culture' },
+    { title:'Gran Vía evening stroll', kind:'stroll' } ] },
+  { keywords:['seville'], activities:[
+    { title:'Seville Cathedral and the Giralda', kind:'culture' },
+    { title:'Real Alcázar palace and gardens', kind:'culture' },
+    { title:'Plaza de España and María Luisa Park', kind:'outdoor' },
+    { title:'Triana and an evening flamenco show', kind:'stroll' },
+    { title:'Barrio Santa Cruz lanes', kind:'stroll' } ] },
+  { keywords:['rome'], activities:[
+    { title:'Colosseum and the Roman Forum', kind:'culture' },
+    { title:'Vatican Museums and St. Peter\'s Basilica', kind:'culture' },
+    { title:'Pantheon and Piazza Navona', kind:'stroll' },
+    { title:'Trastevere evening wander', kind:'stroll' },
+    { title:'Trevi Fountain and the Spanish Steps', kind:'stroll' },
+    { title:'Borghese Gallery and gardens', kind:'culture' } ] },
+  { keywords:['florence'], activities:[
+    { title:'Uffizi Gallery', kind:'culture' },
+    { title:'Duomo and the dome climb', kind:'culture' },
+    { title:'Ponte Vecchio and Oltrarno artisan streets', kind:'stroll' },
+    { title:'Piazzale Michelangelo sunset', kind:'outdoor' },
+    { title:'Accademia Gallery (Michelangelo\'s David)', kind:'culture' },
+    { title:'Mercato Centrale food hall', kind:'stroll' } ] },
+  { keywords:['venice'], activities:[
+    { title:'St. Mark\'s Square and Basilica', kind:'culture' },
+    { title:'Doge\'s Palace', kind:'culture' },
+    { title:'Grand Canal by vaporetto or gondola', kind:'stroll' },
+    { title:'Rialto Market', kind:'stroll' },
+    { title:'Burano and Murano island hop', kind:'outdoor' } ] },
+  { keywords:['amalfi','positano'], activities:[
+    { title:'Path of the Gods hike', kind:'outdoor' },
+    { title:'Positano beach and boutique lanes', kind:'stroll' },
+    { title:'Boat trip along the Amalfi Coast', kind:'outdoor' },
+    { title:'Amalfi town and its cathedral', kind:'culture' },
+    { title:'Ravello and the Villa Rufolo gardens', kind:'culture' } ] },
+  { keywords:['paris'], activities:[
+    { title:'Louvre Museum', kind:'culture' },
+    { title:'Eiffel Tower and the Champ de Mars', kind:'culture' },
+    { title:'Seine banks and Île de la Cité walk', kind:'stroll' },
+    { title:'Montmartre and Sacré-Cœur', kind:'stroll' },
+    { title:'Musée d\'Orsay', kind:'culture' },
+    { title:'Luxembourg Gardens', kind:'outdoor' },
+    { title:'Le Marais café crawl', kind:'stroll' } ] },
+  { keywords:['nice'], activities:[
+    { title:'Promenade des Anglais walk', kind:'stroll' },
+    { title:'Vieux Nice and the Cours Saleya market', kind:'stroll' },
+    { title:'Castle Hill viewpoint', kind:'outdoor' },
+    { title:'Matisse Museum in Cimiez', kind:'culture' },
+    { title:'Beach afternoon on the Baie des Anges', kind:'outdoor' } ] },
+  { keywords:['london'], activities:[
+    { title:'British Museum', kind:'culture' },
+    { title:'Tower of London and Tower Bridge', kind:'culture' },
+    { title:'South Bank riverside walk', kind:'stroll' },
+    { title:'Borough Market', kind:'stroll' },
+    { title:'Westminster and Buckingham Palace', kind:'culture' },
+    { title:'Hyde Park and Kensington Gardens', kind:'outdoor' },
+    { title:'West End theatre evening', kind:'culture' } ] },
+  { keywords:['edinburgh'], activities:[
+    { title:'Edinburgh Castle', kind:'culture' },
+    { title:'Royal Mile and its closes', kind:'stroll' },
+    { title:'Arthur\'s Seat hike', kind:'outdoor' },
+    { title:'National Museum of Scotland', kind:'culture' },
+    { title:'Dean Village and the Water of Leith walk', kind:'outdoor' },
+    { title:'Grassmarket pubs and shops', kind:'stroll' } ] },
+  { keywords:['dublin'], activities:[
+    { title:'Trinity College and the Book of Kells', kind:'culture' },
+    { title:'Guinness Storehouse', kind:'culture' },
+    { title:'Temple Bar and Grafton Street', kind:'stroll' },
+    { title:'St Stephen\'s Green and Georgian Dublin', kind:'outdoor' },
+    { title:'Kilmainham Gaol', kind:'culture' },
+    { title:'Howth cliff walk', kind:'outdoor' } ] },
+  { keywords:['galway'], activities:[
+    { title:'Latin Quarter and Quay Street', kind:'stroll' },
+    { title:'Salthill Promenade walk', kind:'outdoor' },
+    { title:'Cliffs of Moher day trip', kind:'outdoor' },
+    { title:'Galway City Museum and the Spanish Arch', kind:'culture' },
+    { title:'Traditional-music pub evening', kind:'stroll' } ] },
+  { keywords:['tokyo'], activities:[
+    { title:'Senso-ji Temple in Asakusa', kind:'culture' },
+    { title:'Shibuya Crossing and Harajuku', kind:'stroll' },
+    { title:'Meiji Shrine and Yoyogi Park', kind:'outdoor' },
+    { title:'Tsukiji outer market food walk', kind:'stroll' },
+    { title:'Tokyo National Museum in Ueno', kind:'culture' },
+    { title:'Shinjuku Gyoen garden', kind:'outdoor' },
+    { title:'Omoide Yokocho izakaya alleys', kind:'stroll' } ] },
+  { keywords:['kyoto'], activities:[
+    { title:'Fushimi Inari shrine gates', kind:'culture' },
+    { title:'Kinkaku-ji (Golden Pavilion)', kind:'culture' },
+    { title:'Arashiyama bamboo grove and river', kind:'outdoor' },
+    { title:'Gion and Higashiyama lanes', kind:'stroll' },
+    { title:'Nishiki Market', kind:'stroll' },
+    { title:'Philosopher\'s Path walk', kind:'outdoor' } ] },
+  { keywords:['osaka'], activities:[
+    { title:'Dotonbori street-food crawl', kind:'stroll' },
+    { title:'Osaka Castle and its park', kind:'culture' },
+    { title:'Kuromon Ichiba Market', kind:'stroll' },
+    { title:'Umeda Sky Building observatory', kind:'culture' },
+    { title:'Shinsekai and Tsutenkaku Tower', kind:'stroll' } ] },
+  { keywords:['bangkok'], activities:[
+    { title:'Grand Palace and Wat Phra Kaew', kind:'culture' },
+    { title:'Wat Arun via the river ferry', kind:'culture' },
+    { title:'Wat Pho and the reclining Buddha', kind:'culture' },
+    { title:'Street-food crawl in Chinatown (Yaowarat)', kind:'stroll' },
+    { title:'Chao Phraya sunset boat ride', kind:'stroll' },
+    { title:'Lumpini Park morning walk', kind:'outdoor' } ] },
+  { keywords:['chiang mai'], activities:[
+    { title:'Old City temples (Wat Phra Singh, Wat Chedi Luang)', kind:'culture' },
+    { title:'Doi Suthep temple and viewpoint', kind:'culture' },
+    { title:'Night bazaar and street-food stalls', kind:'stroll' },
+    { title:'Ethical elephant sanctuary visit', kind:'outdoor' },
+    { title:'Thai cooking class', kind:'stroll' } ] },
+  { keywords:['phuket','patong','kata'], activities:[
+    { title:'Kata Noi beach morning', kind:'outdoor' },
+    { title:'Phang Nga Bay island boat trip', kind:'outdoor' },
+    { title:'Phuket Old Town shophouse streets', kind:'stroll' },
+    { title:'Big Buddha viewpoint', kind:'culture' },
+    { title:'Karon viewpoint and sunset', kind:'outdoor' } ] },
+  { keywords:['ubud'], activities:[
+    { title:'Tegallalang rice terraces', kind:'outdoor' },
+    { title:'Sacred Monkey Forest sanctuary', kind:'outdoor' },
+    { title:'Ubud Palace and the art market', kind:'stroll' },
+    { title:'Campuhan Ridge Walk', kind:'outdoor' },
+    { title:'Tirta Empul water temple', kind:'culture' },
+    { title:'Spa and wellness afternoon', kind:'stroll' } ] },
+  { keywords:['seminyak'], activities:[
+    { title:'Seminyak Beach sunset', kind:'outdoor' },
+    { title:'Beach-club afternoon', kind:'stroll' },
+    { title:'Tanah Lot temple trip', kind:'culture' },
+    { title:'Eat Street boutiques and cafés', kind:'stroll' },
+    { title:'Beginner surf lesson', kind:'outdoor' } ] },
+  { keywords:['singapore'], activities:[
+    { title:'Gardens by the Bay', kind:'outdoor' },
+    { title:'Hawker-centre food crawl (Maxwell Road)', kind:'stroll' },
+    { title:'Marina Bay waterfront and evening light show', kind:'stroll' },
+    { title:'National Museum of Singapore', kind:'culture' },
+    { title:'Chinatown and Little India walk', kind:'culture' },
+    { title:'Sentosa beaches', kind:'outdoor' } ] },
+  { keywords:['mexico city','cdmx','ciudad de mexico','ciudad de méxico'], activities:[
+    { title:'Zócalo, the cathedral, and Templo Mayor', kind:'culture' },
+    { title:'Chapultepec Park and the Anthropology Museum', kind:'culture' },
+    { title:'Roma–Condesa taquería crawl', kind:'stroll' },
+    { title:'Coyoacán and the Frida Kahlo Museum', kind:'culture' },
+    { title:'Teotihuacán pyramids day trip', kind:'outdoor' } ] },
+  { keywords:['oaxaca'], activities:[
+    { title:'Santo Domingo church and cultural museum', kind:'culture' },
+    { title:'Monte Albán ruins', kind:'culture' },
+    { title:'Benito Juárez Market street-food tour', kind:'stroll' },
+    { title:'Hierve el Agua springs trip', kind:'outdoor' },
+    { title:'Mezcal tasting', kind:'stroll' } ] },
+  { keywords:['tulum'], activities:[
+    { title:'Tulum ruins above the sea', kind:'culture' },
+    { title:'Cenote swim (Gran Cenote)', kind:'outdoor' },
+    { title:'Beach-zone morning on the sand', kind:'outdoor' },
+    { title:'Tulum Pueblo taco crawl', kind:'stroll' },
+    { title:'Sian Ka\'an biosphere boat trip', kind:'outdoor' } ] },
+  { keywords:['cancun','cancún'], activities:[
+    { title:'Hotel Zone beach morning', kind:'outdoor' },
+    { title:'Isla Mujeres ferry day', kind:'outdoor' },
+    { title:'Chichén Itzá day trip', kind:'culture' },
+    { title:'El Rey ruins and the lagoon', kind:'culture' },
+    { title:'Mercado 28 and downtown eats', kind:'stroll' } ] },
+  { keywords:['san juan','puerto rico'], activities:[
+    { title:'Old San Juan and El Morro fort', kind:'culture' },
+    { title:'Condado beach', kind:'outdoor' },
+    { title:'El Yunque rainforest trip', kind:'outdoor' },
+    { title:'Paseo de la Princesa evening walk', kind:'stroll' },
+    { title:'Santurce street art and food', kind:'stroll' } ] },
+  { keywords:['aruba','oranjestad'], activities:[
+    { title:'Eagle Beach morning', kind:'outdoor' },
+    { title:'Arikok National Park', kind:'outdoor' },
+    { title:'Catamaran snorkel sail off Palm Beach', kind:'outdoor' },
+    { title:'Oranjestad pastel streets and shops', kind:'stroll' },
+    { title:'California Lighthouse sunset', kind:'outdoor' } ] },
+  { keywords:['sydney'], activities:[
+    { title:'Sydney Opera House and Circular Quay', kind:'culture' },
+    { title:'Bondi-to-Coogee coastal walk', kind:'outdoor' },
+    { title:'Manly ferry and beach', kind:'outdoor' },
+    { title:'Royal Botanic Garden', kind:'outdoor' },
+    { title:'The Rocks markets and lanes', kind:'stroll' } ] },
+  { keywords:['melbourne'], activities:[
+    { title:'Laneway coffee and street-art crawl', kind:'stroll' },
+    { title:'Queen Victoria Market', kind:'stroll' },
+    { title:'National Gallery of Victoria', kind:'culture' },
+    { title:'Royal Botanic Gardens Melbourne', kind:'outdoor' },
+    { title:'St Kilda foreshore and sunset penguins', kind:'outdoor' } ] },
+  { keywords:['queenstown'], activities:[
+    { title:'Skyline Gondola and luge', kind:'outdoor' },
+    { title:'Lake Wakatipu waterfront walk', kind:'outdoor' },
+    { title:'Queenstown Hill summit hike', kind:'outdoor' },
+    { title:'Milford Sound day trip', kind:'outdoor' },
+    { title:'Arrowtown historic village', kind:'culture' } ] }
+];
+
+// Honest fallback pool for cities we don't have on file (also cycles in when
+// a known city's pool runs out on a long stay) — deliberately generic wording,
+// never invented venue names.
+var GENERIC_ACTIVITIES = [
+  { title:'Explore the old town / central district', kind:'stroll' },
+  { title:'Local market visit', kind:'stroll' },
+  { title:'Top local museum or gallery', kind:'culture' },
+  { title:'City park or waterfront walk', kind:'outdoor' },
+  { title:'Main square and landmark viewpoint', kind:'culture' },
+  { title:'Free time to explore at your own pace', kind:'stroll' }
+];
+
 // Honest medium-distance assumption for pairs we don't have on file.
 var GENERIC_LEG = {
   drive:{ dur:'≈4h30m (estimated)', hrs:4.5, base:120,

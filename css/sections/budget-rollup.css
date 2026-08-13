@@ -1,0 +1,35 @@
+/* Section: Budget rollup — itemized budget box, over/under flags, freshness note, and summary badge. */
+.budget-rollup-section{display:none; margin:28px 0 32px;}
+.budget-rollup-section.visible{display:block;}
+
+/* Itemized budget box (mockup .budget-box / .budget-row) */
+.budget-box{border:1.5px solid var(--gray-300); border-radius:var(--radius); padding:26px 28px;}
+.budget-row{display:flex; justify-content:space-between; gap:16px; padding:11px 0; border-bottom:1px solid var(--gray-300); font-size:14px;}
+.budget-row .amt{font-variant-numeric:tabular-nums; font-weight:700; white-space:nowrap;}
+.budget-row.total{border-bottom:none; border-top:2px solid var(--ink); margin-top:6px; padding-top:16px; font-size:17px; font-weight:900;}
+.budget-row.total.over .amt{color:var(--warn);}
+.budget-row.vs{border-bottom:none; font-size:12.5px; color:var(--gray-600); padding-top:2px;}
+.budget-row.vs .amt.over{color:var(--warn); font-weight:800;}
+.budget-row.vs .amt.under{color:var(--good); font-weight:800;}
+.budget-row.compare-subtotal{border-bottom:none; font-size:12.5px; color:var(--gray-600); font-weight:700; padding-top:10px;}
+
+/* Line-item over-budget flag: warn color + a short "top overage driver" tag */
+.budget-row.over-share .label, .budget-row.over-share .amt{color:var(--warn);}
+.over-flag{
+  display:inline-block; font-size:10px; font-weight:800; color:var(--warn); background:#FFF0EC;
+  padding:2px 8px; border-radius:6px; margin-left:8px; vertical-align:middle; letter-spacing:.02em;
+  white-space:nowrap;
+}
+
+.budget-footnote{font-size:12px; color:var(--gray-600); margin-top:12px; border-top:1px dashed var(--gray-300); padding-top:12px;}
+
+/* PRD freshness disclaimer (mockup .freshness-note) */
+.freshness-note{font-size:12px; color:var(--gray-600); margin-top:12px; display:flex; align-items:center; gap:6px;}
+
+/* Summary-level flag on the confirmation card (mockup trip-hero .budget-badge) */
+.budget-badge{
+  display:none; background:var(--good); color:#fff; padding:10px 20px; border-radius:999px;
+  font-weight:800; font-size:14px; white-space:nowrap; margin:16px auto 0; width:fit-content;
+}
+.budget-badge.visible{display:block;}
+.budget-badge.over{background:var(--warn);}

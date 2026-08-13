@@ -267,7 +267,10 @@ window.generateDestinationOptions = generateDestinationOptions;
 // it, or every generated option is; in any mode, when "No rental car" forced
 // out a drive that would otherwise have been the recommended way to make a
 // leg. Unknown entries/city pairs carry no fit data and never fabricate a
-// conflict. Returns an array of human-readable warning strings (empty = none).
+// conflict. Legs flagged by classifyLegConnection (no reasonable — or no
+// verifiable — inter-city connection; see js/sections/leg-transport.js) add
+// one warning line each, coexisting with the requirement conflicts above.
+// Returns an array of human-readable warning strings (empty = none).
 var CONFLICT_GAP_LABELS = {
   english: 'English-speaking',
   access: 'limited-mobility-accessible',
@@ -324,6 +327,15 @@ function detectConflictWarnings(data){
       ' leg' + (squeezedLegs.length > 1 ? 's' : '') +
       ' — driving would otherwise be the most practical option; showing the best non-drive alternatives.');
   }
+
+  // Legs without a reasonable (or verifiable) inter-city connection (PRD
+  // edge case: surfaced as a trade-off, never silently routed around) —
+  // one line per affected leg, flagged at leg-build time.
+  (data.legs || []).forEach(function(leg){
+    if (leg.connectionWarning && leg.connectionWarning.reason){
+      warnings.push(leg.connectionWarning.reason);
+    }
+  });
   return warnings;
 }
 
@@ -343,17 +355,25 @@ function selectDestinationOption(data, opt){
   data.arrivalFlight = buildArrivalFlight(data, data.arrivalFlight);
   data.legs = buildLegs(data, data.legs);
   data.lodging = buildLodging(data, data.lodging);
+  // The itinerary follows the new route/selections (the viewed day index is
+  // preserved by the renderer where still valid).
+  data.itinerary = generateItinerary(data);
+  // New route, legs, and lodging → recompute the budget rollup.
+  data.budgetRollup = buildBudgetRollup(data);
   data.conflictWarnings = detectConflictWarnings(data);
   persistData(data);
   // Keep the confirmation card's route + dates, the route stepper, the
-  // arrival flight, the inter-city legs, the per-stop lodging, and the
-  // conflict banner in sync with the chosen option.
+  // arrival flight, the inter-city legs, the per-stop lodging, the
+  // day-by-day itinerary, and the conflict banner in sync with the
+  // chosen option.
   $('confirmationSummary').textContent = summarize(data);
   renderDateLine(data);
   renderRouteStepper(data);
   renderArrivalFlight(data);
   renderLegs(data);
   renderLodging(data);
+  renderItinerary(data);
+  renderBudgetRollup(data);
   renderConflictWarnings(data);
 }
 
